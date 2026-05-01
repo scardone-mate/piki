@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Piki by Mate</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,sans-serif}
+:root{--o:#F47920;--dk:#2C2C2A;--bg:#F8F6F3}
+body{background:var(--bg);min-height:100vh}
+.hidden{display:none!important}
+
+/* AUTH */
+#s-login{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#fff;padding:2rem}
+.logo{width:220px;margin-bottom:2rem}
+.card{background:#f5f5f5;border:1px solid #e0e0e0;border-radius:12px;padding:1.5rem;width:100%;max-width:340px}
+.lbl{display:block;font-size:11px;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px}
+.inp{width:100%;background:#fff;border:1px solid #ddd;border-radius:8px;padding:10px 14px;font-size:14px;color:#333;margin-bottom:1rem}
+.btn-dk{width:100%;background:var(--dk);color:#fff;border:none;border-radius:8px;padding:12px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:.5rem}
+.link{font-size:12px;color:#999;text-align:center;cursor:pointer;text-decoration:underline;display:block;margin-bottom:.75rem}
+.note{font-size:11px;color:#bbb;text-align:center;line-height:1.5}
+.divider{border-top:1px solid #e0e0e0;margin:1rem 0}
+
+/* DASH */
+#s-dash{display:none;flex-direction:column;min-height:100vh}
+#s-dash.on{display:flex}
+#s-admin{display:none;flex-direction:column;min-height:100vh}
+#s-admin.on{display:flex}
+#s-cp{display:none;flex-direction:column;min-height:100vh;background:var(--bg)}
+#s-cp.on{display:flex}
+#s-aprov{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#000;text-align:center;padding:2rem}
+#s-aprov.on{display:flex}
+
+/* TOPBAR */
+.topbar{background:#fff;border-bottom:1px solid #e8e8e8;padding:0 1.25rem;height:52px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.tlogo{font-size:20px;font-weight:700;color:var(--dk)}
+.tlogo .lo{color:var(--o)}.tlogo .lc{color:#C0392B}
+.tbadge{background:rgba(244,121,32,.12);color:var(--o);font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;border:1px solid rgba(244,121,32,.3)}
+.tav{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;cursor:pointer}
+.layout{display:flex;flex:1;overflow:hidden}
+.sb{width:52px;background:#fff;border-right:1px solid #e8e8e8;display:flex;flex-direction:column;align-items:center;padding:.75rem 0;gap:4px}
+.ni{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:#bbb;transition:all .15s;position:relative}
+.ni:hover,.ni.on{background:rgba(244,121,32,.1);color:var(--o)}
+.ni.on::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:2px;background:var(--o);border-radius:0 2px 2px 0}
+.sp{flex:1}
+.main{flex:1;overflow-y:auto;padding:1.25rem}
+.pnl{display:none}.pnl.on{display:block}
+
+/* COMPONENTS */
+.ptitle{font-size:18px;font-weight:700;color:var(--dk);margin-bottom:.875rem}
+.ptitle span{color:var(--o)}
+.box{background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:1rem 1.125rem;margin-bottom:.75rem}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:.625rem;margin-bottom:.75rem}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-bottom:.75rem}
+.sl{font-size:11px;color:#999;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}
+.sv{font-size:24px;font-weight:700}
+.gn{color:#3B6D11}.am{color:#854F0B}.rd{color:#A32D2D}
+.cr{display:flex;align-items:center;gap:8px;padding:.5rem 0;border-bottom:1px solid #f0f0f0;cursor:pointer}
+.cr:last-child{border:none}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.dg{background:#63B922}.da{background:#EF9F27}.dr{background:#E24B4A}
+.cn{font-size:13px;font-weight:600;flex:1;color:var(--dk)}
+.ct{font-size:11px;color:#bbb}
+.tg{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px}
+.tg-g{background:#EAF3DE;color:#3B6D11}.tg-a{background:#FAEEDA;color:#854F0B}.tg-r{background:#FCEBEB;color:#A32D2D}
+.upz{border:1.5px dashed rgba(244,121,32,.4);border-radius:12px;padding:1.75rem;text-align:center;cursor:pointer;background:#fff;margin-bottom:.75rem}
+.upz:hover{border-color:var(--o)}
+.mrow{display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem}
+.mc{background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:.625rem .875rem;cursor:pointer;display:flex;align-items:center;gap:8px}
+.mc:hover,.mc.on{border-color:var(--o);background:rgba(244,121,32,.02)}
+.mc.on{border-width:1.5px}
+.mt{font-size:13px;font-weight:600;color:var(--dk)}
+.ms{font-size:11px;color:#aaa}
+.btn-o{background:var(--o);color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:14px;font-weight:700;cursor:pointer;width:100%;margin-bottom:.75rem}
+.anl{text-align:center;padding:1.5rem;display:none}
+.anl.on{display:block}
+.pu{width:8px;height:8px;background:var(--o);border-radius:50%;display:inline-block;animation:pu 1s infinite;margin:0 2px}
+.pu:nth-child(2){animation-delay:.2s}.pu:nth-child(3){animation-delay:.4s}
+@keyframes pu{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.7)}}
+.rbox{background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:1rem;display:none;margin-bottom:.75rem}
+.rbox.on{display:block}
+.semrow{display:flex;align-items:center;gap:10px;margin-bottom:.75rem}
+.sem{width:40px;background:var(--dk);border-radius:22px;padding:4px;display:flex;flex-direction:column;gap:3px}
+.sl2{width:32px;height:32px;border-radius:50%;opacity:.15;transition:opacity .4s}
+.sl2.on{opacity:1}
+.sl-r{background:#E24B4A}.sl-a{background:#EF9F27}.sl-g{background:#63B922}
+.vrd{font-size:17px;font-weight:700}
+.sco{font-size:12px;color:#aaa;margin-top:2px}
+.ri{display:flex;gap:8px;padding:.5rem .75rem;background:#fafafa;border-radius:8px;margin-bottom:.4rem;border-left:2px solid var(--o)}
+.ric{font-size:14px;flex-shrink:0}
+.rit{font-size:12px;color:var(--dk);line-height:1.5}
+.ctar{display:flex;gap:.5rem;margin-top:.75rem;padding-top:.75rem;border-top:1px solid #f0f0f0}
+.cb{flex:1;padding:10px;border-radius:8px;border:none;font-size:13px;font-weight:700;cursor:pointer}
+.cb-r{background:var(--dk);color:#fff}
+.cb-g{background:#63B922;color:#fff}
+.ann{position:relative;margin-bottom:.75rem}
+.ann img{width:100%;border-radius:8px;display:block;max-height:250px;object-fit:contain;background:#f5f5f5}
+.mk{position:absolute;transform:translate(-50%,-50%);cursor:pointer;z-index:5}
+.mkd{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.mkd-r{background:#E24B4A}.mkd-a{background:#EF9F27}
+.mktt{position:absolute;background:var(--dk);color:#fff;font-size:10px;padding:4px 8px;border-radius:6px;bottom:26px;left:50%;transform:translateX(-50%);display:none;max-width:170px;text-align:center;white-space:normal;line-height:1.4;z-index:10}
+.mk:hover .mktt{display:block}
+.bcard{display:flex;align-items:center;gap:12px;margin-bottom:.875rem}
+.bav{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0}
+.bn{font-size:16px;font-weight:700;color:var(--dk)}
+.bi{font-size:12px;color:#aaa}
+.blogo{max-height:44px;max-width:130px;object-fit:contain;display:none}
+.tab-r{display:flex;gap:5px;margin-bottom:.875rem;flex-wrap:wrap}
+.tab{padding:6px 14px;border-radius:20px;border:1px solid #e0e0e0;background:#fff;font-size:12px;font-weight:600;cursor:pointer;color:#aaa}
+.tab.on{background:var(--o);color:#fff;border-color:var(--o)}
+.ag{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px;margin-bottom:.5rem}
+.at{border-radius:8px;border:1px solid #e0e0e0;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:#f5f5f5;overflow:hidden;cursor:pointer}
+.at:hover{border-color:var(--o)}
+.at img{width:100%;height:100%;object-fit:contain;padding:3px}
+.ap{font-size:20px;color:#ccc}
+.dr2{display:flex;align-items:center;gap:6px;padding:.4rem .625rem;background:#f5f5f5;border-radius:8px;margin-bottom:.4rem}
+.dn{font-size:12px;font-weight:600;flex:1;color:var(--dk)}
+.ds{font-size:10px;color:#aaa}
+.dd{font-size:12px;color:#ccc;cursor:pointer;padding:2px 4px}
+.dd:hover{color:#E24B4A}
+.savr{display:flex;align-items:center;justify-content:space-between;margin-top:.75rem;padding-top:.75rem;border-top:1px solid #f0f0f0}
+.savn{font-size:11px;color:#aaa}
+.clcard{background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:.875rem 1rem;display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:.5rem}
+.clcard:hover{border-color:rgba(244,121,32,.4)}
+.clav{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0}
+.apcirc{width:64px;height:64px;border-radius:50%;background:#63B922;display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;margin:0 auto 1rem;animation:pop .4s cubic-bezier(.175,.885,.32,1.275)}
+@keyframes pop{0%{transform:scale(0)}100%{transform:scale(1)}}
+.aptitle{font-size:22px;font-weight:700;color:#fff;margin-bottom:6px}
+.apsub{font-size:13px;color:rgba(255,255,255,.55);margin-bottom:1.25rem;line-height:1.5}
+.aptag{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:.5rem 1rem;margin-bottom:1.25rem;font-size:13px;color:#fff}
+.apbadge{background:#63B922;color:#fff;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:700}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50;display:none;align-items:center;justify-content:center;padding:1rem}
+.modal-bg.on{display:flex}
+.modal{background:#fff;border-radius:12px;padding:1.25rem;width:100%;max-width:320px}
+.mh{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.mht{font-size:15px;font-weight:700;color:var(--dk)}
+.mx{font-size:16px;cursor:pointer;color:#aaa}
+.mf{margin-bottom:.625rem}
+.mfl{display:block;font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}
+.mfi{width:100%;background:#f5f5f5;border:1px solid #e0e0e0;border-radius:8px;padding:9px 12px;font-size:13px;color:#333}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--dk);color:#fff;padding:9px 18px;border-radius:20px;font-size:13px;font-weight:600;z-index:100;display:none}
+</style>
+</head>
+<body>
+
+<div id="s-login">
+  <img class="logo" src="images/logo-white.png" onerror="this.style.display='none';document.getElementById('lt').style.display='block'" alt="Piki"/>
+  <div id="lt" style="display:none;font-size:26px;font-weight:700;color:#2C2C2A;margin-bottom:1.5rem"><span style="color:#F47920">(</span>piki<span style="color:#C0392B">)</span></div>
+  <div class="card">
+    <label class="lbl">Email</label>
+    <input type="email" class="inp" id="email" placeholder="tu@empresa.com"/>
+    <label class="lbl">Contraseña</label>
+    <input type="password" class="inp" id="pass" placeholder="••••••••"/>
+    <button class="btn-dk" onclick="doLogin()">Ingresar</button>
+    <a class="link" onclick="toast2('Revisa tu correo para restablecer la contrasena')">Olvido su contrasena?</a>
+    <div class="note">El acceso es por invitacion.<br>Tu email fue registrado por Mate.</div>
+  </div>
+</div>
+
+<div id="s-dash">
+  <div class="topbar">
+    <div class="tlogo"><span class="lo">(</span>piki<span class="lc">)</span></div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="tbadge" id="db-badge">Marca</div>
+      <div class="tav" id="db-av" style="background:var(--o)" onclick="doLogout()">M</div>
+    </div>
+  </div>
+  <div class="layout">
+    <div class="sb">
+      <div class="ni on" id="ni-home" onclick="goP('home')" title="Inicio">&#9638;</div>
+      <div class="ni" id="ni-analyze" onclick="goP('analyze')" title="Analizar">&#9678;</div>
+      <div class="ni" id="ni-brand" onclick="goP('brand')" title="Libro de marca">&#9672;</div>
+      <div class="sp"></div>
+      <div class="ni" id="ni-settings" onclick="goP('settings')" title="Brand Settings">&#9881;</div>
+      <div class="ni" onclick="doLogout()" title="Salir" style="color:#E24B4A">&#9211;</div>
+    </div>
+    <div class="main">
+      <div class="pnl on" id="p-home">
+        <div class="bcard">
+          <div class="bav" id="h-av" style="background:var(--o)">M</div>
+          <img id="h-logo" class="blogo" src="" alt=""/>
+          <div><div class="bn" id="h-name">Tu Marca</div><div class="bi" id="h-ind">Bienvenido a tu plataforma de marca</div></div>
+        </div>
+        <div class="g3">
+          <div class="box"><div class="sl">Aprobados</div><div class="sv gn" id="st-ap">0</div></div>
+          <div class="box"><div class="sl">En revision</div><div class="sv am" id="st-rv">0</div></div>
+          <div class="box"><div class="sl">Fuera linea</div><div class="sv rd" id="st-out">0</div></div>
+        </div>
+        <div class="ptitle">Ultimas <span>revisiones</span></div>
+        <div class="box">
+          <div class="cr"><div class="dot dg"></div><div class="cn">Banner redes — Enero</div><div class="ct">hace 2h</div><div class="tg tg-g">EN LINEA</div></div>
+          <div class="cr"><div class="dot da"></div><div class="cn">Flyer Q1</div><div class="ct">ayer</div><div class="tg tg-a">REVISAR</div></div>
+          <div class="cr"><div class="dot dr"></div><div class="cn">Post Instagram</div><div class="ct">hace 3 dias</div><div class="tg tg-r">FUERA</div></div>
+        </div>
+        <button class="btn-o" onclick="goP('analyze')">+ Analizar nuevo material</button>
+      </div>
+      <div class="pnl" id="p-analyze">
+        <div id="step-up">
+          <div class="ptitle"><span>Subi</span> tu material</div>
+          <input type="file" id="mat-f" accept="image/*,video/*,application/pdf" style="display:none" onchange="handleFile(event)"/>
+          <div class="upz" onclick="document.getElementById('mat-f').click()">
+            <div style="font-size:22px;margin-bottom:5px;color:#bbb">&#11014;</div>
+            <div style="font-size:13px;color:#888" id="up-txt"><strong style="color:var(--o)">Clic para subir</strong> o arrastra<br><span style="font-size:11px">PNG, JPG, PDF, MP4, MOV</span></div>
+          </div>
+          <div style="font-size:13px;font-weight:600;color:var(--dk);margin-bottom:.5rem">Como queres revisarlo?</div>
+          <div class="mrow">
+            <div class="mc on" id="m-full" onclick="setM('full')"><span style="font-size:16px">&#9889;</span><div><div class="mt">Revision completa</div><div class="ms">La IA analiza todo</div></div></div>
+            <div class="mc" id="m-part" onclick="setM('part')"><span style="font-size:16px">&#9678;</span><div><div class="mt">Algo en particular</div><div class="ms">Elegis que revisar</div></div></div>
+          </div>
+          <div id="p-opts" style="display:none;margin-bottom:.75rem">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem">
+              <div class="mc on" onclick="this.classList.toggle('on')"><span>&#127912;</span><div class="mt" style="font-size:12px">Colores</div></div>
+              <div class="mc" onclick="this.classList.toggle('on')"><span style="font-family:serif">Aa</span><div class="mt" style="font-size:12px">Tipografia</div></div>
+              <div class="mc" onclick="this.classList.toggle('on')"><span>&#9678;</span><div class="mt" style="font-size:12px">Logo</div></div>
+              <div class="mc" onclick="this.classList.toggle('on')"><span>&#9998;</span><div class="mt" style="font-size:12px">Tono</div></div>
+            </div>
+          </div>
+          <button class="btn-o" onclick="runAnalysis()">Analizar con IA</button>
+        </div>
+        <div id="step-res" style="display:none">
+          <div style="margin-bottom:.75rem"><span style="font-size:13px;color:var(--o);cursor:pointer;font-weight:600" onclick="resetAn()">&#8592; Nuevo analisis</span></div>
+          <div class="anl" id="anl-el"><div class="pu"></div><div class="pu"></div><div class="pu"></div><div style="font-size:12px;color:#aaa;margin-top:8px">Analizando contra el libro de marca...</div></div>
+          <div class="rbox" id="rbox">
+            <div class="semrow">
+              <div class="sem"><div class="sl2 sl-r" id="sl-r"></div><div class="sl2 sl-a" id="sl-a"></div><div class="sl2 sl-g" id="sl-g"></div></div>
+              <div><div class="vrd" id="vrd"></div><div class="sco" id="sco"></div></div>
+            </div>
+            <div class="ann" id="ann" style="display:none"><img id="ann-img" src="" alt="Material"/><div id="mkrs"></div></div>
+            <div id="recs"></div>
+            <div class="ctar">
+              <button class="cb cb-r" onclick="ctaA('dev')">&#8617; Devolver con analisis</button>
+              <button class="cb cb-g" onclick="ctaA('ap')">&#10003; Aprobar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="pnl" id="p-brand">
+        <div class="ptitle">Libro de <span>marca</span></div>
+        <div class="tab-r">
+          <button class="tab on" onclick="swT(['b-c','b-t','b-r'],'b-c',this)">Colores</button>
+          <button class="tab" onclick="swT(['b-c','b-t','b-r'],'b-t',this)">Tipografia</button>
+          <button class="tab" onclick="swT(['b-c','b-t','b-r'],'b-r',this)">Reglas</button>
+        </div>
+        <div id="b-c"><div class="box"><div style="font-size:12px;font-weight:600;margin-bottom:.625rem">Colores primarios</div><div style="display:flex;gap:8px;flex-wrap:wrap"><div><div style="width:38px;height:38px;background:#F47920;border-radius:8px"></div><div style="font-size:9px;color:#aaa;margin-top:2px">#F47920</div></div><div><div style="width:38px;height:38px;background:#2C2C2A;border-radius:8px"></div><div style="font-size:9px;color:#aaa;margin-top:2px">#2C2C2A</div></div><div><div style="width:38px;height:38px;background:#888780;border-radius:8px"></div><div style="font-size:9px;color:#aaa;margin-top:2px">#888780</div></div><div><div style="width:38px;height:38px;background:#fff;border-radius:8px;border:1px solid #ddd"></div><div style="font-size:9px;color:#aaa;margin-top:2px">#FFFFFF</div></div></div></div></div>
+        <div id="b-t" style="display:none"><div class="box" style="margin-bottom:.5rem"><div style="font-size:22px;font-weight:700">Gotham Rounded</div><div style="font-size:11px;color:#aaa">Principal · Bold, Medium</div></div><div class="box"><div style="font-size:18px">Nunito Sans</div><div style="font-size:11px;color:#aaa">Secundaria · Regular, SemiBold</div></div></div>
+        <div id="b-r" style="display:none"><div class="box" style="margin-bottom:.5rem"><div style="font-size:12px;font-weight:600;margin-bottom:.4rem">Logo</div><div style="font-size:12px;color:#888;line-height:1.8">• Area de respeto 20px minimo<br>• No distorsionar ni rotar<br>• Solo versiones oficiales</div></div><div class="box"><div style="font-size:12px;font-weight:600;margin-bottom:.4rem">Tono de voz</div><div style="font-size:12px;color:#888;line-height:1.8">• Directo y cercano<br>• Nunca corporativo<br>• Positivo y propositivo</div></div></div>
+      </div>
+      <div class="pnl" id="p-settings">
+        <div class="ptitle">Brand <span>Settings</span></div>
+        <div class="tab-r">
+          <button class="tab on" onclick="swT(['s-a','s-r','s-w'],'s-a',this)">Assets</button>
+          <button class="tab" onclick="swT(['s-a','s-r','s-w'],'s-r',this)">Redes</button>
+          <button class="tab" onclick="swT(['s-a','s-r','s-w'],'s-w',this)">Web</button>
+        </div>
+        <div id="s-a">
+          <div class="box" style="margin-bottom:.5rem"><div style="font-size:12px;font-weight:600;margin-bottom:.5rem">Logos</div><div class="ag" id="lg-g"><div class="at" onclick="document.getElementById('lg-up').click()"><div class="ap">+</div></div></div><input type="file" id="lg-up" accept="image/*,.svg" style="display:none" multiple onchange="addAG(event,'lg-g')"/></div>
+          <div class="box" style="margin-bottom:.5rem"><div style="font-size:12px;font-weight:600;margin-bottom:.5rem">Documentos de marca</div><div id="doc-ls"></div><div class="at" style="aspect-ratio:unset;padding:.4rem .75rem;flex-direction:row;gap:8px;width:100%;border-radius:8px" onclick="document.getElementById('doc-up').click()"><span class="ap" style="font-size:16px">+</span><span style="font-size:12px;color:#aaa">PDF, imagenes...</span></div><input type="file" id="doc-up" accept="image/*,.pdf" style="display:none" multiple onchange="addDG(event,'doc-ls')"/></div>
+          <div class="box" style="margin-bottom:.5rem"><div style="font-size:12px;font-weight:600;margin-bottom:.5rem">Referencias</div><div class="ag" id="ref-g"><div class="at" onclick="document.getElementById('ref-up').click()"><div class="ap">+</div></div></div><input type="file" id="ref-up" accept="image/*" style="display:none" multiple onchange="addAG(event,'ref-g')"/></div>
+          <div class="savr"><span class="savn">Assets guardados automaticamente</span><button class="btn-o" style="width:auto;padding:7px 16px;margin:0" onclick="toast2('Cambios guardados')">Guardar cambios</button></div>
+        </div>
+        <div id="s-r" style="display:none"><div class="box"><div style="display:flex;flex-direction:column;gap:.5rem"><div style="display:flex;align-items:center;gap:8px"><span style="width:20px">&#128247;</span><span style="font-size:12px;width:75px;color:#888">Instagram</span><input type="url" placeholder="https://instagram.com/..." style="flex:1;font-size:12px;background:#f5f5f5;border:1px solid #e0e0e0;border-radius:6px;padding:7px 10px"/></div><div style="display:flex;align-items:center;gap:8px"><span style="width:20px">&#128188;</span><span style="font-size:12px;width:75px;color:#888">LinkedIn</span><input type="url" placeholder="https://linkedin.com/..." style="flex:1;font-size:12px;background:#f5f5f5;border:1px solid #e0e0e0;border-radius:6px;padding:7px 10px"/></div><div style="display:flex;align-items:center;gap:8px"><span style="width:20px">&#127925;</span><span style="font-size:12px;width:75px;color:#888">TikTok</span><input type="url" placeholder="https://tiktok.com/..." style="flex:1;font-size:12px;background:#f5f5f5;border:1px solid #e0e0e0;border-radius:6px;padding:7px 10px"/></div></div></div></div>
+        <div id="s-w" style="display:none"><div class="box"><div style="display:flex;flex-direction:column;gap:.5rem"><div style="display:flex;align-items:center;gap:8px"><span style="width:20px">&#127968;</span><span style="font-size:12px;width:75px;color:#888">Web</span><input type="url" placeholder="https://tumarca.com" style="flex:1;font-size:12px;background:#f5f5f5;border:1px solid #e0e0e0;border-radius:6px;padding:7px 10px"/></div><div style="display:flex;align-items:center;gap:8px"><span style="width:20px">&#128722;</span><span style="font-size:12px;width:75px;color:#888">Tienda</span><input type="url" placeholder="https://tienda..." style="flex:1;font-size:12px;background:#f5f5f5;border:1px solid #e0e0e0;border-radius:6px;padding:7px 10px"/></div></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="s-admin">
+  <div class="topbar">
+    <div class="tlogo"><span class="lo">(</span>piki<span class="lc">)</span></div>
+    <div style="display:flex;align-items:center;gap:8px"><div class="tbadge">Admin · Mate</div><div class="tav" style="background:var(--dk)" onclick="doLogout()">MA</div></div>
+  </div>
+  <div class="main" style="max-width:720px;margin:0 auto;width:100%">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem">
+      <div><div class="ptitle">Clientes <span>activos</span></div><div style="font-size:12px;color:#aaa">Selecciona un cliente</div></div>
+      <button class="btn-o" style="width:auto;padding:8px 16px;margin:0" onclick="showNC()">+ Nuevo cliente</button>
+    </div>
+    <div id="cl-list"><div style="text-align:center;padding:2rem;color:#aaa;font-size:13px">No hay clientes. Crea el primero.</div></div>
+  </div>
+</div>
+
+<div id="s-cp">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:18px;cursor:pointer;color:var(--o);font-weight:700" onclick="goAdmin()">&#8592;</span>
+      <div><div style="font-size:14px;font-weight:700;color:var(--dk)" id="cp-name">Cliente</div><div style="font-size:11px;color:#aaa">Vista admin</div></div>
+    </div>
+    <div class="tbadge">Admin · Mate</div>
+  </div>
+  <div class="main" style="max-width:680px;margin:0 auto;width:100%">
+    <div class="tab-r">
+      <button class="tab on" onclick="swCPT('cp-d',this)">Dashboard</button>
+      <button class="tab" onclick="swCPT('cp-u',this)">Subir material</button>
+      <button class="tab" onclick="swCPT('cp-a',this)">Assets</button>
+    </div>
+    <div id="cp-d">
+      <div class="g4"><div class="box"><div class="sl">Total</div><div class="sv" id="cp-tot" style="color:var(--dk)">0</div></div><div class="box"><div class="sl">Aprobados</div><div class="sv gn" id="cp-ap">0</div></div><div class="box"><div class="sl">Revision</div><div class="sv am" id="cp-rv">0</div></div><div class="box"><div class="sl">Fuera</div><div class="sv rd" id="cp-out">0</div></div></div>
+      <div class="ptitle" style="font-size:14px">Historial</div>
+      <div class="box"><div class="cr"><div class="dot dg"></div><div class="cn">Banner redes</div><div class="ct">hace 2 dias</div><div class="tg tg-g">APROBADO</div></div><div class="cr"><div class="dot da"></div><div class="cn">Flyer Q1</div><div class="ct">hace 5 dias</div><div class="tg tg-a">EN REVISION</div></div></div>
+    </div>
+    <div id="cp-u" style="display:none">
+      <input type="file" id="adm-f" accept="image/*,video/*,application/pdf" style="display:none" onchange="handleAdmFile(event)"/>
+      <div class="upz" onclick="document.getElementById('adm-f').click()"><div style="font-size:22px;margin-bottom:5px;color:#bbb">&#11014;</div><div style="font-size:13px;color:#888" id="adm-ut"><strong style="color:var(--o)">Clic para subir</strong> material del cliente<br><span style="font-size:11px">PNG, JPG, PDF, MP4, MOV</span></div></div>
+      <div class="mrow"><div class="mc on" id="adm-mf" onclick="setAdmM('full')"><span style="font-size:16px">&#9889;</span><div><div class="mt">Revision completa</div><div class="ms">La IA analiza todo</div></div></div><div class="mc" id="adm-mp" onclick="setAdmM('part')"><span style="font-size:16px">&#9678;</span><div><div class="mt">Algo en particular</div><div class="ms">Elegis que revisar</div></div></div></div>
+      <button class="btn-o" onclick="runAdmAnalysis()">Analizar con IA</button>
+      <div class="anl" id="adm-anl"><div class="pu"></div><div class="pu"></div><div class="pu"></div><div style="font-size:12px;color:#aaa;margin-top:8px">Analizando...</div></div>
+      <div class="rbox" id="adm-rbox">
+        <div class="semrow"><div class="sem"><div class="sl2 sl-r" id="asl-r"></div><div class="sl2 sl-a" id="asl-a"></div><div class="sl2 sl-g" id="asl-g"></div></div><div><div class="vrd" id="adm-vrd"></div><div class="sco" id="adm-sco"></div></div></div>
+        <div id="adm-recs"></div>
+        <div class="ctar"><button class="cb cb-r" onclick="admCta('dev')">&#8617; Devolver</button><button class="cb cb-g" onclick="admCta('ap')">&#10003; Aprobar</button></div>
+      </div>
+    </div>
+    <div id="cp-a" style="display:none">
+      <div class="box" style="margin-bottom:.5rem"><div style="font-size:12px;font-weight:600;margin-bottom:.5rem">Logos</div><div class="ag" id="cp-lg"><div class="at" onclick="document.getElementById('cp-lg-up').click()"><div class="ap">+</div></div></div><input type="file" id="cp-lg-up" accept="image/*,.svg" style="display:none" multiple onchange="addCPA(event,'cp-lg','logo')"/></div>
+      <div class="box" style="margin-bottom:.5rem"><div style="font-size:12px;font-weight:600;margin-bottom:.5rem">Documentos de marca</div><div id="cp-docs"></div><div class="at" style="aspect-ratio:unset;padding:.4rem .75rem;flex-direction:row;gap:8px;width:100%;border-radius:8px" onclick="document.getElementById('cp-doc-up').click()"><span class="ap" style="font-size:16px">+</span><span style="font-size:12px;color:#aaa">PDF, imagenes del libro de marca...</span></div><input type="file" id="cp-doc-up" accept="image/*,.pdf" style="display:none" multiple onchange="addCPDoc(event)"/></div>
+      <div class="box" style="margin-bottom:.5rem"><div style="font-size:12px;font-weight:600;margin-bottom:.5rem">Referencias</div><div class="ag" id="cp-ref"><div class="at" onclick="document.getElementById('cp-ref-up').click()"><div class="ap">+</div></div></div><input type="file" id="cp-ref-up" accept="image/*" style="display:none" multiple onchange="addCPA(event,'cp-ref','ref')"/></div>
+      <div class="savr"><span class="savn" id="cp-savn">Archivos guardados en esta sesion</span><button class="btn-o" style="width:auto;padding:7px 16px;margin:0" onclick="saveCPAs()">Guardar cambios</button></div>
+    </div>
+  </div>
+</div>
+
+<div id="s-aprov">
+  <div class="apcirc">&#10003;</div>
+  <div class="aptitle">Material aprobado!</div>
+  <div class="apsub">El equipo creativo sera notificado<br>que el material esta listo para publicar.</div>
+  <div class="aptag"><span id="ap-name">Material</span><span class="apbadge">APROBADO</span></div>
+  <button class="btn-o" style="width:auto;padding:10px 28px" onclick="closeAprov()">Volver al inicio</button>
+</div>
+
+<div class="modal-bg" id="nc-modal">
+  <div class="modal">
+    <div class="mh"><div class="mht">Nuevo cliente</div><span class="mx" onclick="document.getElementById('nc-modal').classList.remove('on')">&#10005;</span></div>
+    <div class="mf"><label class="mfl">Nombre de la marca</label><input class="mfi" type="text" id="nc-n" placeholder="Ej: Alma"/></div>
+    <div class="mf"><label class="mfl">Email del cliente</label><input class="mfi" type="email" id="nc-e" placeholder="contacto@alma.com"/></div>
+    <div class="mf" style="margin-bottom:1rem"><label class="mfl">Industria</label><input class="mfi" type="text" id="nc-i" placeholder="Moda, Gastronomia..."/></div>
+    <button class="btn-o" onclick="createC()">Crear cliente</button>
+  </div>
+</div>
+
+<div class="toast" id="toast-el"></div>
+
+<script>
+const DB={
+  c:JSON.parse(localStorage.getItem('piki_v5_c')||'[]'),
+  r:JSON.parse(localStorage.getItem('piki_v5_r')||'{}'),
+  save(){localStorage.setItem('piki_v5_c',JSON.stringify(this.c));localStorage.setItem('piki_v5_r',JSON.stringify(this.r))},
+  byEmail(e){const k=this.r[e.toLowerCase()];return k?this.c.find(x=>x.key===k):null}
+};
+let _adm=false,_brand=null,_cc=null;
+let _fb64=null,_ftype=null,_fup=false,_isVid=false;
+let _afb64=null,_aftype=null,_afup=false,_amode='full',_mode='full';
+
+function gs(id){
+  ['s-login','s-dash','s-admin','s-cp','s-aprov'].forEach(s=>{
+    const el=document.getElementById(s);
+    if(el){el.style.display='none';el.classList.remove('on');}
+  });
+  const el=document.getElementById(id);
+  if(el){el.style.display='flex';el.classList.add('on');}
+}
+
+function doLogin(){
+  const email=document.getElementById('email').value.trim();
+  if(!email){toast2('Ingresa tu email');return;}
+  _adm=email.includes('@matecr.com');
+  if(_adm){loadCLs();gs('s-admin');return;}
+  const c=DB.byEmail(email);
+  if(c){
+    _brand=c;
+    document.getElementById('db-badge').textContent=c.name;
+    const av=document.getElementById('db-av');av.textContent=c.initials;av.style.background=c.color;
+    document.getElementById('h-av').textContent=c.initials;document.getElementById('h-av').style.background=c.color;
+    document.getElementById('h-name').textContent=c.name;
+    document.getElementById('h-ind').textContent=c.industry||'Bienvenido a tu plataforma de marca';
+    document.getElementById('st-ap').textContent=c.approved||0;
+    document.getElementById('st-rv').textContent=c.review||0;
+    document.getElementById('st-out').textContent=c.rejected||0;
+    loadLogo(c.key);
+    goP('home');gs('s-dash');
+  }else{
+    const n=email.split('@')[0];
+    _brand={key:null,name:n,initials:n.substring(0,2).toUpperCase(),color:'#F47920',industry:''};
+    document.getElementById('db-badge').textContent=n;
+    document.getElementById('db-av').textContent=_brand.initials;
+    document.getElementById('h-av').textContent=_brand.initials;
+    document.getElementById('h-name').textContent=n;
+    document.getElementById('h-ind').textContent='Bienvenido a tu plataforma de marca';
+    goP('home');gs('s-dash');
+  }
+}
+function doLogout(){_brand=null;_adm=false;_fb64=null;_fup=false;gs('s-login');}
+
+async function loadLogo(key){
+  if(!key)return;
+  try{
+    const docs=await loadIDB(key);
+    const logo=docs.find(d=>d.name==='__logo__');
+    if(logo){
+      document.getElementById('h-logo').src=logo.data;
+      document.getElementById('h-logo').style.display='block';
+      document.getElementById('h-av').style.display='none';
+    }
+  }catch(e){}
+}
+
+function goP(name){
+  document.querySelectorAll('.pnl').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.ni[id^="ni-"]').forEach(n=>n.classList.remove('on'));
+  const p=document.getElementById('p-'+name);if(p)p.classList.add('on');
+  const n=document.getElementById('ni-'+name);if(n)n.classList.add('on');
+}
+function swT(all,show,btn){
+  all.forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  btn.closest('.pnl, #s-cp').querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
+  document.getElementById(show).style.display='block';btn.classList.add('on');
+}
+function swCPT(id,btn){
+  ['cp-d','cp-u','cp-a'].forEach(t=>{const el=document.getElementById(t);if(el)el.style.display='none';});
+  document.querySelectorAll('#s-cp .tab').forEach(b=>b.classList.remove('on'));
+  document.getElementById(id).style.display='block';if(btn)btn.classList.add('on');
+}
+function setM(m){_mode=m;document.getElementById('m-full').classList.toggle('on',m==='full');document.getElementById('m-part').classList.toggle('on',m==='part');document.getElementById('p-opts').style.display=m==='part'?'block':'none';}
+function setAdmM(m){_amode=m;document.getElementById('adm-mf').classList.toggle('on',m==='full');document.getElementById('adm-mp').classList.toggle('on',m==='part');}
+
+function handleFile(e){
+  const f=e.target.files[0];if(!f)return;
+  _fup=true;_isVid=f.type.startsWith('video/');
+  if(_isVid){_ftype='image/jpeg';const url=URL.createObjectURL(f);const v=document.createElement('video');v.src=url;v.currentTime=1;v.addEventListener('seeked',()=>{const c=document.createElement('canvas');c.width=v.videoWidth||640;c.height=v.videoHeight||360;c.getContext('2d').drawImage(v,0,0,c.width,c.height);_fb64=c.toDataURL('image/jpeg',.85).split(',')[1];URL.revokeObjectURL(url);});v.load();}
+  else{_ftype=f.type;const r=new FileReader();r.onload=ev=>{_fb64=ev.target.result.split(',')[1];};r.readAsDataURL(f);}
+  document.getElementById('up-txt').innerHTML='<strong style="color:#3B6D11">✓ '+f.name+'</strong><br><span style="font-size:11px">Listo para analizar</span>';
+  e.target.value='';
+}
+
+async function runAnalysis(){
+  if(!_fup){document.getElementById('mat-f').click();return;}
+  if(_isVid&&!_fb64){toast2('Espera un momento...');setTimeout(runAnalysis,1500);return;}
+  document.getElementById('step-up').style.display='none';
+  document.getElementById('step-res').style.display='block';
+  document.getElementById('anl-el').classList.add('on');
+  document.getElementById('rbox').classList.remove('on');
+  const docs=_brand&&_brand.key?await loadIDB(_brand.key):[];
+  const result=await callAI(_fb64,_ftype,_brand,docs.filter(d=>d.name!=='__logo__'),_isVid);
+  showRes(result,_fb64,_ftype,'sl-r','sl-a','sl-g','vrd','sco','recs','ann','ann-img','mkrs','anl-el','rbox');
+}
+function resetAn(){
+  _fup=false;_fb64=null;_ftype=null;_isVid=false;
+  document.getElementById('step-up').style.display='block';
+  document.getElementById('step-res').style.display='none';
+  document.getElementById('rbox').classList.remove('on');
+  document.getElementById('up-txt').innerHTML='<strong style="color:var(--o)">Clic para subir</strong> o arrastra<br><span style="font-size:11px">PNG, JPG, PDF, MP4, MOV</span>';
+}
+function ctaA(action){
+  if(action==='ap'){document.getElementById('ap-name').textContent=(_brand&&_brand.name)||'tu marca';gs('s-aprov');}
+  else{toast2('Material devuelto con analisis');resetAn();}
+}
+function closeAprov(){if(_adm)goAdmin();else{goP('home');resetAn();gs('s-dash');}}
+
+function showRes(result,b64,type,idr,ida,idg,idv,ids,idrecs,idann,idimg,idmk,idanl,idbox){
+  document.getElementById(idanl).classList.remove('on');
+  const c=result.color||'amber';
+  [idr,ida,idg].forEach(id=>document.getElementById(id).classList.remove('on'));
+  if(c==='red')document.getElementById(idr).classList.add('on');
+  if(c==='amber')document.getElementById(ida).classList.add('on');
+  if(c==='green')document.getElementById(idg).classList.add('on');
+  const v=document.getElementById(idv);v.textContent=result.verdict;v.className='vrd '+c;
+  document.getElementById(ids).textContent='Puntuacion: '+result.score+'/100';
+  if(b64&&type&&type.startsWith('image/')&&result.recs){
+    document.getElementById(idimg).src='data:'+type+';base64,'+b64;
+    document.getElementById(idann).style.display='block';
+    const mk=document.getElementById(idmk);mk.innerHTML='';
+    const pos=[{top:'22%',left:'30%'},{top:'58%',left:'65%'},{top:'74%',left:'26%'},{top:'36%',left:'76%'}];
+    result.recs.filter(r=>r.icon!=='✓').forEach((r,i)=>{
+      if(i>=pos.length)return;
+      const m=document.createElement('div');m.className='mk';m.style.top=pos[i].top;m.style.left=pos[i].left;
+      m.innerHTML=`<div class="mkd ${r.icon==='✕'?'mkd-r':'mkd-a'}">${i+1}</div><div class="mktt">${r.aspect}: ${r.text.substring(0,70)}</div>`;
+      mk.appendChild(m);
+    });
+  }else if(document.getElementById(idann))document.getElementById(idann).style.display='none';
+  document.getElementById(idrecs).innerHTML=(result.recs||[]).map(r=>`<div class="ri"><div class="ric">${r.icon}</div><div class="rit"><strong>${r.aspect}:</strong> ${r.text}</div></div>`).join('');
+  document.getElementById(idbox).classList.add('on');
+}
+
+async function callAI(b64,type,brand,docs,isVid){
+  const bn=(brand&&brand.name)||'Cliente';
+  const mt=isVid?'frame de un VIDEO':'material grafico';
+  const vn=isVid?'\n\nEs un frame de video. Evalua colores, tipografias, logo y tono visual.':'';
+  let bref='LIBRO DE MARCA — '+bn+':\n';
+  if(docs&&docs.length>0)bref+='Analiza contra los documentos de marca adjuntos. Se muy especifico sobre elementos concretos del material.';
+  else bref+='- Colores: Naranja #F47920, Negro #2C2C2A, Gris #888780, Blanco #FFFFFF\n- Tipografia: Gotham Rounded (principal), Nunito Sans (secundaria)\n- Logo: No distorsionar. Area de respeto 20px.\n- Tono: Directo, cercano, positivo.';
+  const prompt=`Sos un experto en identidad de marca. Analiza el ${mt} adjunto.\n\n${bref}${vn}\n\nResponde SOLO con JSON valido sin texto extra:\n{"score":numero 0-100,"color":"green" o "amber" o "red","verdict":"veredicto corto especifico","recs":[{"icon":"✓" o "⚠" o "✕","aspect":"aspecto","text":"recomendacion MUY especifica con tipografias exactas, colores hex, elementos concretos"}]}\n\ngreen=85-100, amber=50-84, red=0-49.`;
+  let content=[];
+  if(docs&&docs.length>0){
+    content.push({type:"text",text:"DOCUMENTOS DE MARCA DEL CLIENTE:"});
+    for(const d of docs){
+      if(!d.data)continue;
+      const db=d.data.includes(',')?d.data.split(',')[1]:d.data;
+      if(!db)continue;
+      if(d.type==='application/pdf')content.push({type:"document",source:{type:"base64",media_type:"application/pdf",data:db}});
+      else if(d.type&&d.type.startsWith('image/'))content.push({type:"image",source:{type:"base64",media_type:d.type,data:db}});
+    }
+    content.push({type:"text",text:"Ahora analiza este material:"});
+  }
+  if(b64&&type&&type.startsWith('image/')){
+    content.push({type:"image",source:{type:"base64",media_type:type,data:b64}});
+    content.push({type:"text",text:prompt});
+  }else content=[{type:"text",text:prompt+"\n\n(Sin imagen adjunta.)"}];
+  try{
+    const resp=await fetch('/api/analyze',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({messages:[{role:'user',content}]})
+    });
+    const data=await resp.json();
+    if(data.error)throw new Error(data.error.message);
+    const txt=data.content.map(b=>b.text||'').join('');
+    return JSON.parse(txt.replace(/```json|```/g,'').trim());
+  }catch(err){
+    console.error(err);
+    return {score:0,color:'red',verdict:'Error de conexion',recs:[{icon:'✕',aspect:'Error',text:'No se pudo conectar. Verifica que la variable ANTHROPIC_API_KEY esta configurada en Netlify > Site configuration > Environment variables.'}]};
+  }
+}
+
+async function openIDB(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open('piki_v5',1);
+    r.onupgradeneeded=e=>e.target.result.createObjectStore('docs',{keyPath:'id'});
+    r.onsuccess=e=>res(e.target.result);r.onerror=rej;
+  });
+}
+async function saveIDB(ck,name,type,data){
+  const db=await openIDB();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction('docs','readwrite');
+    tx.objectStore('docs').put({id:ck+'__'+name,clientKey:ck,name,type,data});
+    tx.oncomplete=res;tx.onerror=rej;
+  });
+}
+async function loadIDB(ck){
+  try{
+    const db=await openIDB();
+    return new Promise((res,rej)=>{
+      const tx=db.transaction('docs','readonly');const results=[];
+      const req=tx.objectStore('docs').openCursor();
+      req.onsuccess=e=>{const cur=e.target.result;if(cur){if(cur.value.clientKey===ck)results.push(cur.value);cur.continue();}else res(results);};
+      req.onerror=rej;
+    });
+  }catch(e){return[];}
+}
+
+function loadCLs(){
+  const list=document.getElementById('cl-list');list.innerHTML='';
+  if(DB.c.length===0){list.innerHTML='<div style="text-align:center;padding:2rem;color:#aaa;font-size:13px">No hay clientes. Crea el primero.</div>';return;}
+  DB.c.forEach(c=>{
+    const card=document.createElement('div');card.className='clcard';card.onclick=()=>openCP(c);
+    card.innerHTML=`<div class="clav" style="background:${c.color}">${c.initials}</div><div style="flex:1"><div style="font-size:14px;font-weight:700;color:var(--dk)">${c.name}</div><div style="font-size:11px;color:#aaa">${c.industry||''}${c.email?' · '+c.email:''}</div></div><div style="font-size:18px;color:#ccc">&#8250;</div>`;
+    list.appendChild(card);
+  });
+}
+function showNC(){document.getElementById('nc-modal').classList.add('on');}
+function createC(){
+  const name=document.getElementById('nc-n').value.trim();if(!name){toast2('Ingresa el nombre');return;}
+  const email=document.getElementById('nc-e').value.trim();
+  const industry=document.getElementById('nc-i').value.trim();
+  const initials=name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+  const cols=['#6B3FA0','#1A6B4A','#C0392B','#2C7BB6','#D47C0A','#F47920'];
+  const color=cols[DB.c.length%cols.length];
+  const key='cl_'+Date.now();
+  DB.c.push({key,name,initials,color,industry,email,approved:0,review:0,rejected:0});
+  if(email)DB.r[email.toLowerCase()]=key;
+  DB.save();
+  document.getElementById('nc-modal').classList.remove('on');
+  ['nc-n','nc-e','nc-i'].forEach(id=>document.getElementById(id).value='');
+  loadCLs();toast2('Cliente '+name+' creado ✓');
+}
+function openCP(c){
+  _cc=c;document.getElementById('cp-name').textContent=c.name;
+  const tot=(c.approved||0)+(c.review||0)+(c.rejected||0);
+  document.getElementById('cp-tot').textContent=tot;
+  document.getElementById('cp-ap').textContent=c.approved||0;
+  document.getElementById('cp-rv').textContent=c.review||0;
+  document.getElementById('cp-out').textContent=c.rejected||0;
+  swCPT('cp-d',document.querySelector('#s-cp .tab'));
+  document.getElementById('adm-ut').innerHTML='<strong style="color:var(--o)">Clic para subir</strong> material del cliente<br><span style="font-size:11px">PNG, JPG, PDF, MP4, MOV</span>';
+  document.getElementById('adm-rbox').classList.remove('on');document.getElementById('adm-anl').classList.remove('on');
+  _afup=false;_afb64=null;
+  loadCPDocs(c.key);
+  gs('s-cp');
+}
+async function loadCPDocs(key){
+  try{
+    const docs=await loadIDB(key);
+    const dl=document.getElementById('cp-docs');dl.innerHTML='';
+    docs.filter(d=>d.name!=='__logo__').forEach(d=>{
+      const row=document.createElement('div');row.className='dr2';
+      row.innerHTML=`<span style="font-size:14px">&#128196;</span><span class="dn">${d.name}</span>`;
+      dl.appendChild(row);
+    });
+    const logo=docs.find(d=>d.name==='__logo__');
+    if(logo){const grid=document.getElementById('cp-lg');const ph=grid.querySelector('.at:last-child');const t=document.createElement('div');t.className='at';t.innerHTML=`<img src="${logo.data}" alt="logo"/>`;grid.insertBefore(t,ph);}
+  }catch(e){}
+}
+function goAdmin(){gs('s-admin');loadCLs();}
+
+function handleAdmFile(e){
+  const f=e.target.files[0];if(!f)return;
+  _afup=true;const isVid=f.type.startsWith('video/');
+  if(isVid){_aftype='image/jpeg';const url=URL.createObjectURL(f);const v=document.createElement('video');v.src=url;v.currentTime=1;v.addEventListener('seeked',()=>{const c=document.createElement('canvas');c.width=v.videoWidth||640;c.height=v.videoHeight||360;c.getContext('2d').drawImage(v,0,0,c.width,c.height);_afb64=c.toDataURL('image/jpeg',.85).split(',')[1];URL.revokeObjectURL(url);});v.load();}
+  else{_aftype=f.type;const r=new FileReader();r.onload=ev=>{_afb64=ev.target.result.split(',')[1];};r.readAsDataURL(f);}
+  document.getElementById('adm-ut').innerHTML='<strong style="color:#3B6D11">✓ '+f.name+'</strong><br><span style="font-size:11px">Listo para analizar</span>';
+  e.target.value='';
+}
+async function runAdmAnalysis(){
+  if(!_afup){document.getElementById('adm-f').click();return;}
+  if(!_afb64){toast2('Espera un momento...');setTimeout(runAdmAnalysis,1500);return;}
+  document.getElementById('adm-rbox').classList.remove('on');document.getElementById('adm-anl').classList.add('on');
+  const docs=_cc&&_cc.key?await loadIDB(_cc.key):[];
+  const result=await callAI(_afb64,_aftype,_cc,docs.filter(d=>d.name!=='__logo__'),false);
+  document.getElementById('adm-anl').classList.remove('on');
+  const c=result.color||'amber';
+  ['asl-r','asl-a','asl-g'].forEach(id=>document.getElementById(id).classList.remove('on'));
+  if(c==='red')document.getElementById('asl-r').classList.add('on');
+  if(c==='amber')document.getElementById('asl-a').classList.add('on');
+  if(c==='green')document.getElementById('asl-g').classList.add('on');
+  const v=document.getElementById('adm-vrd');v.textContent=result.verdict;v.className='vrd '+c;
+  document.getElementById('adm-sco').textContent='Puntuacion: '+result.score+'/100';
+  document.getElementById('adm-recs').innerHTML=(result.recs||[]).map(r=>`<div class="ri"><div class="ric">${r.icon}</div><div class="rit"><strong>${r.aspect}:</strong> ${r.text}</div></div>`).join('');
+  document.getElementById('adm-rbox').classList.add('on');
+}
+function admCta(action){
+  if(action==='ap'){document.getElementById('ap-name').textContent=(_cc&&_cc.name)||'cliente';gs('s-aprov');}
+  else{toast2('Material devuelto con analisis');document.getElementById('adm-rbox').classList.remove('on');}
+}
+function addCPA(e,gridId,type){
+  Array.from(e.target.files).forEach(f=>{
+    const r=new FileReader();r.onload=ev=>{
+      const grid=document.getElementById(gridId);const ph=grid.querySelector('.at:last-child');
+      const t=document.createElement('div');t.className='at';t.innerHTML=`<img src="${ev.target.result}" title="${f.name}"/>`;
+      grid.insertBefore(t,ph);
+      if(type==='logo'&&_cc&&_cc.key)saveIDB(_cc.key,'__logo__',f.type,ev.target.result).then(()=>toast2('Logo guardado ✓')).catch(()=>{});
+    };r.readAsDataURL(f);
+  });e.target.value='';
+}
+function addCPDoc(e){
+  Array.from(e.target.files).forEach(f=>{
+    const sz=f.size>1048576?(f.size/1048576).toFixed(1)+'MB':(f.size/1024).toFixed(0)+'KB';
+    const row=document.createElement('div');row.className='dr2';
+    row.innerHTML=`<span style="font-size:14px">&#128196;</span><span class="dn">${f.name}</span><span class="ds">${sz}</span><span class="dd" onclick="this.parentElement.remove()">&#10005;</span>`;
+    document.getElementById('cp-docs').appendChild(row);
+    if(_cc&&_cc.key){const r2=new FileReader();r2.onload=ev=>{saveIDB(_cc.key,f.name,f.type,ev.target.result).then(()=>toast2('✓ '+f.name+' guardado')).catch(()=>toast2('Error guardando '+f.name));};r2.readAsDataURL(f);}
+  });e.target.value='';
+}
+function saveCPAs(){const n=document.getElementById('cp-savn');n.textContent='✓ Guardado correctamente';n.style.color='#3B6D11';setTimeout(()=>{n.textContent='Archivos guardados en esta sesion';n.style.color='';},2500);}
+function addAG(e,gridId){Array.from(e.target.files).forEach(f=>{const r=new FileReader();r.onload=ev=>{const grid=document.getElementById(gridId);const ph=grid.querySelector('.at:last-child');const t=document.createElement('div');t.className='at';t.innerHTML=`<img src="${ev.target.result}" title="${f.name}"/>`;grid.insertBefore(t,ph);};r.readAsDataURL(f);});e.target.value='';}
+function addDG(e,listId){Array.from(e.target.files).forEach(f=>{const sz=f.size>1048576?(f.size/1048576).toFixed(1)+'MB':(f.size/1024).toFixed(0)+'KB';const row=document.createElement('div');row.className='dr2';row.innerHTML=`<span style="font-size:14px">&#128196;</span><span class="dn">${f.name}</span><span class="ds">${sz}</span><span class="dd" onclick="this.parentElement.remove()">&#10005;</span>`;document.getElementById(listId).appendChild(row);});e.target.value='';}
+function toast2(msg,dur=3000){const t=document.getElementById('toast-el');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',dur);}
+window.onload=()=>gs('s-login');
+</script>
+</body>
+</html>
