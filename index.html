@@ -425,8 +425,40 @@ function setAdmM(m){_amode=m;document.getElementById('adm-mf').classList.toggle(
 function handleFile(e){
   const f=e.target.files[0];if(!f)return;
   _fup=true;_isVid=f.type.startsWith('video/');
-  if(_isVid){_ftype='image/jpeg';const url=URL.createObjectURL(f);const v=document.createElement('video');v.src=url;v.currentTime=1;v.addEventListener('seeked',()=>{const c=document.createElement('canvas');c.width=v.videoWidth||640;c.height=v.videoHeight||360;c.getContext('2d').drawImage(v,0,0,c.width,c.height);_fb64=c.toDataURL('image/jpeg',.85).split(',')[1];URL.revokeObjectURL(url);});v.load();}
-  else{_ftype=f.type;const r=new FileReader();r.onload=ev=>{_fb64=ev.target.result.split(',')[1];};r.readAsDataURL(f);}
+  if(_isVid){
+    _ftype='image/jpeg';
+    const url=URL.createObjectURL(f);
+    const v=document.createElement('video');v.src=url;v.currentTime=1;
+    v.addEventListener('seeked',()=>{
+      const c=document.createElement('canvas');c.width=v.videoWidth||640;c.height=v.videoHeight||360;
+      c.getContext('2d').drawImage(v,0,0,c.width,c.height);
+      const dataUrl=c.toDataURL('image/jpeg',.85);
+      _fb64=dataUrl.split(',')[1];
+      _fdisplay=dataUrl;
+      URL.revokeObjectURL(url);
+    });v.load();
+  } else if(f.type.startsWith('image/')){
+    _ftype='image/jpeg';
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      _fdisplay=ev.target.result; // store original immediately for display
+      const img=new Image();
+      img.onload=()=>{
+        const canvas=document.createElement('canvas');
+        const MAX=1200;
+        let w=img.width,h=img.height;
+        if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}
+        canvas.width=w;canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        _fb64=canvas.toDataURL('image/jpeg',0.75).split(',')[1];
+      };
+      img.src=ev.target.result;
+    };
+    reader.readAsDataURL(f);
+  } else {
+    _ftype=f.type;
+    const r=new FileReader();r.onload=ev=>{_fb64=ev.target.result.split(',')[1];};r.readAsDataURL(f);
+  }
   document.getElementById('up-txt').innerHTML='<strong style="color:#3B6D11">✓ '+f.name+'</strong><br><span style="font-size:11px">Listo para analizar</span>';
   e.target.value='';
 }
@@ -443,7 +475,7 @@ async function runAnalysis(){
   showRes(result,_fb64,_ftype,'sl-r','sl-a','sl-g','vrd','sco','recs','ann','ann-img','mkrs','anl-el','rbox');
 }
 function resetAn(){
-  _fup=false;_fb64=null;_ftype=null;_isVid=false;
+  _fup=false;_fb64=null;_ftype=null;_isVid=false;_fdisplay=null;
   document.getElementById('step-up').style.display='block';
   document.getElementById('step-res').style.display='none';
   document.getElementById('rbox').classList.remove('on');
@@ -464,8 +496,9 @@ function showRes(result,b64,type,idr,ida,idg,idv,ids,idrecs,idann,idimg,idmk,ida
   if(c==='green')document.getElementById(idg).classList.add('on');
   const v=document.getElementById(idv);v.textContent=result.verdict;v.className='vrd '+c;
   document.getElementById(ids).textContent='Puntuacion: '+result.score+'/100';
-  if(b64&&type&&type.startsWith('image/')&&result.recs){
-    document.getElementById(idimg).src='data:'+type+';base64,'+b64;
+  const displaySrc = (idann==='ann'&&_fdisplay) ? _fdisplay : (b64&&type?'data:'+type+';base64,'+b64:null);
+  if(displaySrc&&result.recs){
+    document.getElementById(idimg).src=displaySrc;
     document.getElementById(idann).style.display='block';
     const mk=document.getElementById(idmk);mk.innerHTML='';
     const pos=[{top:'22%',left:'30%'},{top:'58%',left:'65%'},{top:'74%',left:'26%'},{top:'36%',left:'76%'}];
@@ -505,7 +538,7 @@ async function callAI(b64,type,brand,docs,isVid){
     content.push({type:"text",text:prompt});
   }else content=[{type:"text",text:prompt+"\n\n(Sin imagen adjunta.)"}];
   try{
-    const resp=await fetch('https://piki-analyze.scardone.workers.dev',{
+    const resp=await fetch('/.netlify/functions/analyze',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({messages:[{role:'user',content}]})
