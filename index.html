@@ -311,10 +311,30 @@ body{background:var(--bg);min-height:100vh}
       </div>
     </div>
     <div id="cp-a" style="display:none">
-      <div class="box" style="margin-bottom:.5rem"><div style="font-size:12px;font-weight:600;margin-bottom:.5rem">Logos</div><div class="ag" id="cp-lg"><div class="at" onclick="document.getElementById('cp-lg-up').click()"><div class="ap">+</div></div></div><input type="file" id="cp-lg-up" accept="image/*,.svg" style="display:none" multiple onchange="addCPA(event,'cp-lg','logo')"/></div>
-      <div class="box" style="margin-bottom:.5rem"><div style="font-size:12px;font-weight:600;margin-bottom:.5rem">Documentos de marca</div><div id="cp-docs"></div><div class="at" style="aspect-ratio:unset;padding:.4rem .75rem;flex-direction:row;gap:8px;width:100%;border-radius:8px" onclick="document.getElementById('cp-doc-up').click()"><span class="ap" style="font-size:16px">+</span><span style="font-size:12px;color:#aaa">PDF, imagenes del libro de marca...</span></div><input type="file" id="cp-doc-up" accept="image/*,.pdf" style="display:none" multiple onchange="addCPDoc(event)"/></div>
-      <div class="box" style="margin-bottom:.5rem"><div style="font-size:12px;font-weight:600;margin-bottom:.5rem">Referencias</div><div class="ag" id="cp-ref"><div class="at" onclick="document.getElementById('cp-ref-up').click()"><div class="ap">+</div></div></div><input type="file" id="cp-ref-up" accept="image/*" style="display:none" multiple onchange="addCPA(event,'cp-ref','ref')"/></div>
-      <div class="savr"><span class="savn" id="cp-savn">Archivos guardados en esta sesion</span><button class="btn-o" style="width:auto;padding:7px 16px;margin:0" onclick="saveCPAs()">Guardar cambios</button></div>
+      <div class="box" style="margin-bottom:.5rem">
+        <div style="font-size:12px;font-weight:600;margin-bottom:.5rem">Logos</div>
+        <div class="ag" id="cp-lg">
+          <div class="at admin-upload-btn" onclick="document.getElementById('cp-lg-up').click()"><div class="ap">+</div></div>
+        </div>
+        <input type="file" id="cp-lg-up" accept="image/*,.svg" style="display:none" multiple onchange="addCPA(event,'cp-lg','logo')"/>
+      </div>
+      <div class="box" style="margin-bottom:.5rem">
+        <div style="font-size:12px;font-weight:600;margin-bottom:.5rem">Documentos de marca</div>
+        <div id="cp-docs"></div>
+        <div class="at admin-upload-btn" style="aspect-ratio:unset;padding:.4rem .75rem;flex-direction:row;gap:8px;width:100%;border-radius:8px" onclick="document.getElementById('cp-doc-up').click()">
+          <span class="ap" style="font-size:16px">+</span><span style="font-size:12px;color:#aaa">PDF, imagenes del libro de marca...</span>
+        </div>
+        <input type="file" id="cp-doc-up" accept="image/*,.pdf" style="display:none" multiple onchange="addCPDoc(event)"/>
+      </div>
+      <div class="box" style="margin-bottom:.5rem">
+        <div style="font-size:12px;font-weight:600;margin-bottom:.5rem">Referencias</div>
+        <div class="ag" id="cp-ref">
+          <div class="at admin-upload-btn" onclick="document.getElementById('cp-ref-up').click()"><div class="ap">+</div></div>
+        </div>
+        <input type="file" id="cp-ref-up" accept="image/*" style="display:none" multiple onchange="addCPA(event,'cp-ref','ref')"/>
+      </div>
+      <div class="savr admin-upload-btn"><span class="savn" id="cp-savn">Archivos guardados en esta sesion</span><button class="btn-o" style="width:auto;padding:7px 16px;margin:0" onclick="saveCPAs()">Guardar cambios</button></div>
+      <div id="cp-readonly-note" style="display:none;font-size:12px;color:#aaa;text-align:center;padding:.75rem">Solo el administrador puede agregar o modificar assets.</div>
     </div>
   </div>
 </div>
@@ -459,6 +479,7 @@ function handleFile(e){
     _ftype=f.type;
     const r=new FileReader();r.onload=ev=>{_fb64=ev.target.result.split(',')[1];};r.readAsDataURL(f);
   }
+  window._uploadedFileName = f.name;
   document.getElementById('up-txt').innerHTML='<strong style="color:#3B6D11">✓ '+f.name+'</strong><br><span style="font-size:11px">Listo para analizar</span>';
   e.target.value='';
 }
@@ -466,6 +487,15 @@ function handleFile(e){
 async function runAnalysis(){
   if(!_fup){document.getElementById('mat-f').click();return;}
   if(_isVid&&!_fb64){toast2('Espera un momento...');setTimeout(runAnalysis,1500);return;}
+  // Check for duplicate approved material
+  const approvedList = JSON.parse(localStorage.getItem('piki_approved_'+(_brand&&_brand.key||'guest'))||'[]');
+  if(window._uploadedFileName && approvedList.includes(window._uploadedFileName)){
+    if(!confirm('⚠️ Este material ("'+window._uploadedFileName+'") ya fue analizado y aprobado anteriormente.
+
+¿Querés analizarlo de nuevo de todas formas?')){
+      return;
+    }
+  }
   document.getElementById('step-up').style.display='none';
   document.getElementById('step-res').style.display='block';
   document.getElementById('anl-el').classList.add('on');
@@ -482,7 +512,17 @@ function resetAn(){
   document.getElementById('up-txt').innerHTML='<strong style="color:var(--o)">Clic para subir</strong> o arrastra<br><span style="font-size:11px">PNG, JPG, PDF, MP4, MOV</span>';
 }
 function ctaA(action){
-  if(action==='ap'){document.getElementById('ap-name').textContent=(_brand&&_brand.name)||'tu marca';gs('s-aprov');}
+  if(action==='ap'){
+    // Save to approved list
+    if(window._uploadedFileName && _brand){
+      const key = 'piki_approved_'+(_brand.key||'guest');
+      const list = JSON.parse(localStorage.getItem(key)||'[]');
+      if(!list.includes(window._uploadedFileName)) list.push(window._uploadedFileName);
+      localStorage.setItem(key, JSON.stringify(list));
+    }
+    document.getElementById('ap-name').textContent=(_brand&&_brand.name)||'tu marca';
+    gs('s-aprov');
+  }
   else{toast2('Material devuelto con analisis');resetAn();}
 }
 function closeAprov(){if(_adm)goAdmin();else{goP('home');resetAn();gs('s-dash');}}
@@ -538,7 +578,7 @@ async function callAI(b64,type,brand,docs,isVid){
     content.push({type:"text",text:prompt});
   }else content=[{type:"text",text:prompt+"\n\n(Sin imagen adjunta.)"}];
   try{
-    const resp=await fetch('https://piki-analyze.scardone.workers.dev',{
+    const resp=await fetch('/.netlify/functions/analyze',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({messages:[{role:'user',content}]})
@@ -616,6 +656,9 @@ function openCP(c){
   document.getElementById('adm-ut').innerHTML='<strong style="color:var(--o)">Clic para subir</strong> material del cliente<br><span style="font-size:11px">PNG, JPG, PDF, MP4, MOV</span>';
   document.getElementById('adm-rbox').classList.remove('on');document.getElementById('adm-anl').classList.remove('on');
   _afup=false;_afb64=null;
+  // Show/hide upload buttons based on admin status
+  document.querySelectorAll('.admin-upload-btn').forEach(el=>el.style.display=_adm?'':'none');
+  document.getElementById('cp-readonly-note').style.display=_adm?'none':'block';
   loadCPDocs(c.key);
   gs('s-cp');
 }
