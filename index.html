@@ -490,7 +490,7 @@ async function runAnalysis(){
   // Check for duplicate approved material
   const approvedList = JSON.parse(localStorage.getItem('piki_approved_'+(_brand&&_brand.key||'guest'))||'[]');
   if(window._uploadedFileName && approvedList.includes(window._uploadedFileName)){
-    if(!confirm('⚠ Este material ("'+window._uploadedFileName+'") ya fue analizado y aprobado anteriormente.\n\n¿Queres analizarlo de nuevo de todas formas?')){
+    if(!confirm('ADVERTENCIA: Este material ("'+window._uploadedFileName+'") ya fue analizado y aprobado anteriormente.\n\n¿Queres analizarlo de nuevo de todas formas?')){
       return;
     }
   }
