@@ -636,7 +636,7 @@ async function callAI(b64,type,brand,docs,isVid){
     content.push({type:"text",text:prompt});
   }else content=[{type:"text",text:prompt+"\n\n(Sin imagen adjunta.)"}];
   try{
-    const resp=await fetch('/.netlify/functions/analyze',{
+    const resp=await fetch('https://piki-analyze.scardone.workers.dev',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({messages:[{role:'user',content}]})
