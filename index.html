@@ -537,7 +537,15 @@ async function runAnalysis(){
   document.getElementById('anl-el').classList.add('on');
   document.getElementById('rbox').classList.remove('on');
   const docs=_brand&&_brand.key?await loadIDB(_brand.key):[];
-  const result=await callAI(_fb64,_ftype,_brand,docs.filter(d=>d.name!=='__logo__'),_isVid);
+  // Get selected aspects if in 'part' mode
+  let selectedAspects = [];
+  if(_mode==='part'){
+    ['col','tipo','logo2','tono'].forEach(id=>{
+      const el=document.getElementById('o-'+id);
+      if(el&&el.classList.contains('on')) selectedAspects.push(id);
+    });
+  }
+  const result=await callAI(_fb64,_ftype,_brand,docs.filter(d=>d.name!=='__logo__'),_isVid,selectedAspects);
   showRes(result,_fb64,_ftype,'sl-r','sl-a','sl-g','vrd','sco','recs','ann','ann-img','mkrs','anl-el','rbox');
 }
 function resetAn(){
@@ -562,7 +570,40 @@ function saveToHistory(action, result){
     recs: result&&result.recs||[],
     img: _fdisplay||null
   });
-  localStorage.setItem(key, JSON.stringify(list.slice(0,50))); // keep last 50
+  localStorage.setItem(key, JSON.stringify(list.slice(0,50)));
+  updateDashboardStats();
+}
+
+function updateDashboardStats(){
+  if(!_brand) return;
+  const key = 'piki_history_'+(_brand.key||'guest');
+  const list = JSON.parse(localStorage.getItem(key)||'[]');
+  const approved = list.filter(h=>h.status==='approved').length;
+  const changes = list.filter(h=>h.status==='changes').length;
+  const rejected = list.filter(h=>h.status==='rejected').length;
+  const apEl=document.getElementById('st-ap');
+  const rvEl=document.getElementById('st-rv');
+  const outEl=document.getElementById('st-out');
+  if(apEl) apEl.textContent=approved;
+  if(rvEl) rvEl.textContent=changes;
+  if(outEl) outEl.textContent=rejected;
+  // Update recent list
+  renderHomeHistory(list.slice(0,5));
+}
+
+function renderHomeHistory(list){
+  const container = document.getElementById('hist-list');
+  if(!container||list.length===0) return;
+  const labels={approved:'EN LINEA',changes:'REVISAR',rejected:'FUERA'};
+  const dots={approved:'dg',changes:'da',rejected:'dr'};
+  const tags={approved:'tg-g',changes:'tg-a',rejected:'tg-r'};
+  container.innerHTML = list.map(h=>`
+    <div class="cr">
+      <div class="dot ${dots[h.status]}"></div>
+      <div class="cn">${h.name}</div>
+      <div class="ct">${h.date}</div>
+      <div class="tg ${tags[h.status]}">${labels[h.status]}</div>
+    </div>`).join('');
 }
 
 function ctaA(action){
@@ -611,14 +652,23 @@ function showRes(result,b64,type,idr,ida,idg,idv,ids,idrecs,idann,idimg,idmk,ida
   if(idbox==='rbox') window._lastResult=result;
 }
 
-async function callAI(b64,type,brand,docs,isVid){
+async function callAI(b64,type,brand,docs,isVid,aspects){
   const bn=(brand&&brand.name)||'Cliente';
   const mt=isVid?'frame de un VIDEO':'material grafico';
   const vn=isVid?'\n\nEs un frame de video. Evalua colores, tipografias, logo y tono visual.':'';
   let bref='LIBRO DE MARCA — '+bn+':\n';
   if(docs&&docs.length>0)bref+='Analiza contra los documentos de marca adjuntos. Se muy especifico sobre elementos concretos del material.';
   else bref+='- Colores: Naranja #F47920, Negro #2C2C2A, Gris #888780, Blanco #FFFFFF\n- Tipografia: Gotham Rounded (principal), Nunito Sans (secundaria)\n- Logo: No distorsionar. Area de respeto 20px.\n- Tono: Directo, cercano, positivo.';
-  const prompt=`Sos un experto en identidad de marca. Analiza el ${mt} adjunto.\n\n${bref}${vn}\n\nResponde SOLO con JSON valido sin texto extra:\n{"score":numero 0-100,"color":"green" o "amber" o "red","verdict":"veredicto corto especifico","recs":[{"icon":"✓" o "⚠" o "✕","aspect":"aspecto","text":"recomendacion MUY especifica con tipografias exactas, colores hex, elementos concretos"}]}\n\ngreen=85-100, amber=50-84, red=0-49.`;
+
+  // Build aspect-specific instruction
+  const aspectMap = {col:'colores y paleta de colores',tipo:'tipografia y fuentes',logo2:'uso del logo e identidad visual',tono:'tono de voz y mensajes escritos'};
+  let aspectInstruction = '';
+  if(aspects&&aspects.length>0){
+    const names = aspects.map(a=>aspectMap[a]||a).join(', ');
+    aspectInstruction = '\n\nIMPORTANTE: Analiza SOLO los siguientes aspectos: '+names+'. Ignora todo lo demas. Tus recomendaciones deben enfocarse exclusivamente en estos puntos.';
+  }
+
+  const prompt=`Sos un experto en identidad de marca. Analiza el ${mt} adjunto.\n\n${bref}${vn}${aspectInstruction}\n\nResponde SOLO con JSON valido sin texto extra:\n{"score":numero 0-100,"color":"green" o "amber" o "red","verdict":"veredicto corto especifico sobre los aspectos analizados","recs":[{"icon":"✓" o "⚠" o "✕","aspect":"aspecto","text":"recomendacion MUY especifica con tipografias exactas, colores hex, elementos concretos"}]}\n\ngreen=85-100, amber=50-84, red=0-49.`;
   let content=[];
   if(docs&&docs.length>0){
     content.push({type:"text",text:"DOCUMENTOS DE MARCA DEL CLIENTE:"});
