@@ -349,11 +349,11 @@ body{background:var(--bg);min-height:100vh}
 
 <div class="modal-bg" id="nc-modal">
   <div class="modal">
-    <div class="mh"><div class="mht">Nuevo cliente</div><span class="mx" onclick="document.getElementById('nc-modal').classList.remove('on')">&#10005;</span></div>
+    <div class="mh"><div class="mht" id="nc-modal-title">Nuevo cliente</div><span class="mx" onclick="closeNCModal()">&#10005;</span></div>
     <div class="mf"><label class="mfl">Nombre de la marca</label><input class="mfi" type="text" id="nc-n" placeholder="Ej: Alma"/></div>
     <div class="mf"><label class="mfl">Email del cliente</label><input class="mfi" type="email" id="nc-e" placeholder="contacto@alma.com"/></div>
     <div class="mf" style="margin-bottom:1rem"><label class="mfl">Industria</label><input class="mfi" type="text" id="nc-i" placeholder="Moda, Gastronomia..."/></div>
-    <button class="btn-o" onclick="createC()">Crear cliente</button>
+    <button class="btn-o" id="nc-btn" onclick="createC()">Crear cliente</button>
   </div>
 </div>
 
@@ -490,7 +490,7 @@ async function runAnalysis(){
   // Check for duplicate approved material
   const approvedList = JSON.parse(localStorage.getItem('piki_approved_'+(_brand&&_brand.key||'guest'))||'[]');
   if(window._uploadedFileName && approvedList.includes(window._uploadedFileName)){
-    if(!confirm('ADVERTENCIA: Este material ("'+window._uploadedFileName+'") ya fue analizado y aprobado anteriormente.\n\n¿Queres analizarlo de nuevo de todas formas?')){
+    if(!confirm('⚠ Este material ("'+window._uploadedFileName+'") ya fue analizado y aprobado anteriormente.\n\n¿Queres analizarlo de nuevo de todas formas?')){
       return;
     }
   }
@@ -622,12 +622,70 @@ function loadCLs(){
   const list=document.getElementById('cl-list');list.innerHTML='';
   if(DB.c.length===0){list.innerHTML='<div style="text-align:center;padding:2rem;color:#aaa;font-size:13px">No hay clientes. Crea el primero.</div>';return;}
   DB.c.forEach(c=>{
-    const card=document.createElement('div');card.className='clcard';card.onclick=()=>openCP(c);
-    card.innerHTML=`<div class="clav" style="background:${c.color}">${c.initials}</div><div style="flex:1"><div style="font-size:14px;font-weight:700;color:var(--dk)">${c.name}</div><div style="font-size:11px;color:#aaa">${c.industry||''}${c.email?' · '+c.email:''}</div></div><div style="font-size:18px;color:#ccc">&#8250;</div>`;
+    const card=document.createElement('div');card.className='clcard';
+    card.innerHTML=`
+      <div class="clav" style="background:${c.color};cursor:pointer" onclick="openCP(window.__cl_${c.key})">${c.initials}</div>
+      <div style="flex:1;cursor:pointer" onclick="openCP(window.__cl_${c.key})">
+        <div style="font-size:14px;font-weight:700;color:var(--dk)">${c.name}</div>
+        <div style="font-size:11px;color:#aaa">${c.industry||''}${c.email?' · '+c.email:''}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div onclick="editClient('${c.key}')" style="font-size:12px;color:var(--o);cursor:pointer;padding:4px 8px;border:1px solid rgba(244,121,32,.3);border-radius:6px;white-space:nowrap">Editar</div>
+        <div style="font-size:18px;color:#ccc;cursor:pointer" onclick="openCP(window.__cl_${c.key})">&#8250;</div>
+      </div>`;
+    window['__cl_'+c.key] = c;
     list.appendChild(card);
   });
 }
-function showNC(){document.getElementById('nc-modal').classList.add('on');}
+let _editKey = null;
+
+function showNC(){
+  _editKey = null;
+  document.getElementById('nc-modal-title').textContent = 'Nuevo cliente';
+  document.getElementById('nc-btn').textContent = 'Crear cliente';
+  document.getElementById('nc-btn').onclick = createC;
+  ['nc-n','nc-e','nc-i'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('nc-modal').classList.add('on');
+}
+
+function editClient(key){
+  const c = DB.c.find(x=>x.key===key);
+  if(!c) return;
+  _editKey = key;
+  document.getElementById('nc-modal-title').textContent = 'Editar cliente';
+  document.getElementById('nc-btn').textContent = 'Guardar cambios';
+  document.getElementById('nc-btn').onclick = saveEditClient;
+  document.getElementById('nc-n').value = c.name||'';
+  document.getElementById('nc-e').value = c.email||'';
+  document.getElementById('nc-i').value = c.industry||'';
+  document.getElementById('nc-modal').classList.add('on');
+}
+
+function saveEditClient(){
+  const c = DB.c.find(x=>x.key===_editKey);
+  if(!c) return;
+  const name = document.getElementById('nc-n').value.trim();
+  if(!name){toast2('Ingresa el nombre');return;}
+  const email = document.getElementById('nc-e').value.trim();
+  const industry = document.getElementById('nc-i').value.trim();
+  // Update old email registry
+  if(c.email) delete DB.r[c.email.toLowerCase()];
+  // Update client data
+  c.name = name;
+  c.email = email;
+  c.industry = industry;
+  c.initials = name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+  if(email) DB.r[email.toLowerCase()] = c.key;
+  DB.save();
+  closeNCModal();
+  loadCLs();
+  toast2('Cliente actualizado ✓');
+}
+
+function closeNCModal(){
+  document.getElementById('nc-modal').classList.remove('on');
+  _editKey = null;
+}
 function createC(){
   const name=document.getElementById('nc-n').value.trim();if(!name){toast2('Ingresa el nombre');return;}
   const email=document.getElementById('nc-e').value.trim();
