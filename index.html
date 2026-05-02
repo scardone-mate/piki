@@ -389,7 +389,24 @@ body{background:var(--bg);min-height:100vh}
     <div class="mh"><div class="mht" id="nc-modal-title">Nuevo cliente</div><span class="mx" onclick="closeNCModal()">&#10005;</span></div>
     <div class="mf"><label class="mfl">Nombre de la marca</label><input class="mfi" type="text" id="nc-n" placeholder="Ej: Alma"/></div>
     <div class="mf"><label class="mfl">Email del cliente</label><input class="mfi" type="email" id="nc-e" placeholder="contacto@alma.com"/></div>
-    <div class="mf" style="margin-bottom:1rem"><label class="mfl">Industria</label><input class="mfi" type="text" id="nc-i" placeholder="Moda, Gastronomia..."/></div>
+    <div class="mf"><label class="mfl">Industria</label><input class="mfi" type="text" id="nc-i" placeholder="Moda, Gastronomia..."/></div>
+    <div class="mf" style="margin-bottom:1rem">
+      <label class="mfl">Plan</label>
+      <div style="display:flex;flex-direction:column;gap:6px" id="plan-selector">
+        <label style="display:flex;align-items:center;gap:8px;padding:.625rem .75rem;border:1px solid #e0e0e0;border-radius:8px;cursor:pointer">
+          <input type="radio" name="nc-plan" value="basic" style="accent-color:var(--o)"/>
+          <div><div style="font-size:13px;font-weight:600;color:var(--dk)">Basico — $49/mes</div><div style="font-size:11px;color:#aaa">50 analisis generales por mes</div></div>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;padding:.625rem .75rem;border:1px solid #e0e0e0;border-radius:8px;cursor:pointer">
+          <input type="radio" name="nc-plan" value="pro" style="accent-color:var(--o)" checked/>
+          <div><div style="font-size:13px;font-weight:600;color:var(--dk)">Profesional — $149/mes</div><div style="font-size:11px;color:#aaa">200 analisis generales y particulares</div></div>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;padding:.625rem .75rem;border:1px solid #e0e0e0;border-radius:8px;cursor:pointer">
+          <input type="radio" name="nc-plan" value="enterprise" style="accent-color:var(--o)"/>
+          <div><div style="font-size:13px;font-weight:600;color:var(--dk)">Enterprise — $399/mes</div><div style="font-size:11px;color:#aaa">Analisis ilimitados · multiples marcas</div></div>
+        </label>
+      </div>
+    </div>
     <button class="btn-o" id="nc-btn" onclick="createC()">Crear cliente</button>
   </div>
 </div>
@@ -428,7 +445,9 @@ function doLogin(){
     const av=document.getElementById('db-av');av.textContent=c.initials;av.style.background=c.color;
     document.getElementById('h-av').textContent=c.initials;document.getElementById('h-av').style.background=c.color;
     document.getElementById('h-name').textContent=c.name;
-    document.getElementById('h-ind').textContent=c.industry||'Bienvenido a tu plataforma de marca';
+    const planNames={basic:'Plan Basico · 50 analisis/mes',pro:'Plan Profesional · 200 analisis/mes',enterprise:'Plan Enterprise · Ilimitado'};
+    document.getElementById('h-ind').textContent=planNames[c.plan||'pro']||'Bienvenido a tu plataforma de marca';
+    _brand.limit = c.limit||200;
     document.getElementById('st-ap').textContent=c.approved||0;
     document.getElementById('st-rv').textContent=c.review||0;
     document.getElementById('st-out').textContent=c.rejected||0;
@@ -563,6 +582,7 @@ function saveToHistory(action, result){
   list.unshift({
     name: window._uploadedFileName||'Material',
     date: new Date().toLocaleDateString('es'),
+    dateISO: new Date().toISOString(),
     status,
     verdict: result&&result.verdict||'',
     score: result&&result.score||0,
@@ -733,11 +753,13 @@ function loadCLs(){
   if(DB.c.length===0){list.innerHTML='<div style="text-align:center;padding:2rem;color:#aaa;font-size:13px">No hay clientes. Crea el primero.</div>';return;}
   DB.c.forEach(c=>{
     const card=document.createElement('div');card.className='clcard';
+    const planLabels = {basic:'Basico',pro:'Pro',enterprise:'Enterprise'};
+    const planLabel = planLabels[c.plan||'pro']||'Pro';
     card.innerHTML=`
       <div class="clav" style="background:${c.color};cursor:pointer" onclick="openCP(window.__cl_${c.key})">${c.initials}</div>
       <div style="flex:1;cursor:pointer" onclick="openCP(window.__cl_${c.key})">
         <div style="font-size:14px;font-weight:700;color:var(--dk)">${c.name}</div>
-        <div style="font-size:11px;color:#aaa">${c.industry||''}${c.email?' · '+c.email:''}</div>
+        <div style="font-size:11px;color:#aaa">${c.industry||''}${c.email?' · '+c.email:''} · ${planLabel}</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
         <div onclick="editClient('${c.key}')" style="font-size:12px;color:var(--o);cursor:pointer;padding:4px 8px;border:1px solid rgba(244,121,32,.3);border-radius:6px;white-space:nowrap">Editar</div>
@@ -768,6 +790,9 @@ function editClient(key){
   document.getElementById('nc-n').value = c.name||'';
   document.getElementById('nc-e').value = c.email||'';
   document.getElementById('nc-i').value = c.industry||'';
+  const planToSelect = c.plan||'pro';
+  const planRadio = document.querySelector('input[name="nc-plan"][value="'+planToSelect+'"]');
+  if(planRadio) planRadio.checked = true;
   document.getElementById('nc-modal').classList.add('on');
 }
 
@@ -781,9 +806,14 @@ function saveEditClient(){
   // Update old email registry
   if(c.email) delete DB.r[c.email.toLowerCase()];
   // Update client data
+  const planEl2 = document.querySelector('input[name="nc-plan"]:checked');
+  const plan2 = planEl2 ? planEl2.value : (c.plan||'pro');
+  const planLimits2 = {basic:50, pro:200, enterprise:999999};
   c.name = name;
   c.email = email;
   c.industry = industry;
+  c.plan = plan2;
+  c.limit = planLimits2[plan2];
   c.initials = name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
   if(email) DB.r[email.toLowerCase()] = c.key;
   DB.save();
@@ -803,8 +833,11 @@ function createC(){
   const initials=name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
   const cols=['#6B3FA0','#1A6B4A','#C0392B','#2C7BB6','#D47C0A','#F47920'];
   const color=cols[DB.c.length%cols.length];
+  const planEl = document.querySelector('input[name="nc-plan"]:checked');
+  const plan = planEl ? planEl.value : 'pro';
+  const planLimits = {basic:50, pro:200, enterprise:999999};
   const key='cl_'+Date.now();
-  DB.c.push({key,name,initials,color,industry,email,approved:0,review:0,rejected:0});
+  DB.c.push({key,name,initials,color,industry,email,plan,limit:planLimits[plan],approved:0,review:0,rejected:0});
   if(email)DB.r[email.toLowerCase()]=key;
   DB.save();
   document.getElementById('nc-modal').classList.remove('on');
