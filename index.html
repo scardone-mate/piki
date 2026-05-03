@@ -587,10 +587,15 @@ function saveToHistory(action, result){
     verdict: result&&result.verdict||'',
     score: result&&result.score||0,
     color: result&&result.color||'amber',
-    recs: result&&result.recs||[],
-    img: _fdisplay||null
+    recs: result&&result.recs||[]
+    // Note: images not stored to save space
   });
-  localStorage.setItem(key, JSON.stringify(list.slice(0,50)));
+  try {
+    localStorage.setItem(key, JSON.stringify(list.slice(0,50)));
+  } catch(e) {
+    // If still too large, save without recs
+    localStorage.setItem(key, JSON.stringify(list.slice(0,20).map(h=>({...h,recs:h.recs&&h.recs.slice(0,3)}))));
+  }
   updateDashboardStats();
 }
 
