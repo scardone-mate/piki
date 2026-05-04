@@ -139,11 +139,21 @@ body{background:var(--bg);min-height:100vh}
 .mfl{display:block;font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}
 .mfi{width:100%;background:#f5f5f5;border:1px solid #e0e0e0;border-radius:8px;padding:9px 12px;font-size:13px;color:#333}
 .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--dk);color:#fff;padding:9px 18px;border-radius:20px;font-size:13px;font-weight:600;z-index:100;display:none}
-.hist-item{background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:.875rem 1rem;margin-bottom:.5rem;cursor:pointer;transition:border-color .15s}
+.hist-folder{margin-bottom:.5rem}
+.hist-folder-head{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:.75rem 1rem;cursor:pointer;transition:border-color .15s}
+.hist-folder-head:hover{border-color:rgba(244,121,32,.4)}
+.hist-folder-icon{font-size:16px}
+.hist-folder-name{font-size:14px;font-weight:700;color:var(--dk);flex:1}
+.hist-folder-count{font-size:11px;color:#aaa}
+.hist-folder-del{font-size:14px;cursor:pointer;padding:2px 6px;border-radius:6px;color:#aaa}
+.hist-folder-del:hover{color:#E24B4A;background:#FCEBEB}
+.hist-folder-arrow{font-size:10px;color:#aaa}
+.hist-folder-body{padding:.5rem 0 0 .75rem;border-left:2px solid rgba(244,121,32,.2);margin-left:.75rem;margin-top:.25rem}
+.hist-item{background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:.75rem .875rem;margin-bottom:.4rem;cursor:pointer;transition:border-color .15s}
 .hist-item:hover{border-color:rgba(244,121,32,.4)}
-.hist-item-head{display:flex;align-items:center;gap:10px}
-.hist-item-name{font-size:13px;font-weight:700;color:var(--dk);flex:1}
-.hist-item-date{font-size:11px;color:#aaa}
+.hist-item-head{display:flex;align-items:center;gap:8px}
+.hist-item-name{font-size:12px;font-weight:700;color:var(--dk);flex:1}
+.hist-item-date{font-size:10px;color:#aaa}
 .hist-item-verdict{font-size:11px;color:#aaa;margin-top:3px}
 .hist-empty{text-align:center;padding:2rem;color:#aaa;font-size:13px}
 </style>
@@ -217,10 +227,10 @@ body{background:var(--bg);min-height:100vh}
           </div>
           <div id="p-opts" style="display:none;margin-bottom:.75rem">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem">
-             <div class="mc on" id="o-col" onclick="this.classList.toggle('on')"><span>&#127912;</span><div class="mt" style="font-size:12px">Colores</div></div>
-<div class="mc" id="o-tipo" onclick="this.classList.toggle('on')"><span style="font-family:serif">Aa</span><div class="mt" style="font-size:12px">Tipografia</div></div>
-<div class="mc" id="o-logo2" onclick="this.classList.toggle('on')"><span>&#9678;</span><div class="mt" style="font-size:12px">Logo</div></div>
-<div class="mc" id="o-tono" onclick="this.classList.toggle('on')"><span>&#9998;</span><div class="mt" style="font-size:12px">Tono</div></div>
+              <div class="mc on" onclick="this.classList.toggle('on')"><span>&#127912;</span><div class="mt" style="font-size:12px">Colores</div></div>
+              <div class="mc" onclick="this.classList.toggle('on')"><span style="font-family:serif">Aa</span><div class="mt" style="font-size:12px">Tipografia</div></div>
+              <div class="mc" onclick="this.classList.toggle('on')"><span>&#9678;</span><div class="mt" style="font-size:12px">Logo</div></div>
+              <div class="mc" onclick="this.classList.toggle('on')"><span>&#9998;</span><div class="mt" style="font-size:12px">Tono</div></div>
             </div>
           </div>
           <button class="btn-o" onclick="runAnalysis()">Analizar con IA</button>
@@ -879,34 +889,98 @@ async function loadCPDocs(key){
     if(logo){const grid=document.getElementById('cp-lg');const ph=grid.querySelector('.at:last-child');const t=document.createElement('div');t.className='at';t.innerHTML=`<img src="${logo.data}" alt="logo"/>`;grid.insertBefore(t,ph);}
   }catch(e){}
 }
+function getMonthKey(dateISO){
+  if(!dateISO) return 'SIN-FECHA';
+  const d = new Date(dateISO);
+  const months = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+  return months[d.getMonth()]+'-'+String(d.getFullYear()).slice(2);
+}
+
 function loadHistory(){
   const key = 'piki_history_'+(_brand&&_brand.key||'guest');
   const list = JSON.parse(localStorage.getItem(key)||'[]');
   window._histList = list;
-  filterHist('all', document.querySelector('#hist-tabs .tab'));
+  window._histFilter = 'all';
+  renderHistFolders();
 }
 
 function filterHist(filter, btn){
   document.querySelectorAll('#hist-tabs .tab').forEach(b=>b.classList.remove('on'));
   if(btn) btn.classList.add('on');
+  window._histFilter = filter;
+  renderHistFolders();
+}
+
+function renderHistFolders(){
   const list = window._histList||[];
+  const filter = window._histFilter||'all';
   const filtered = filter==='all' ? list : list.filter(h=>h.status===filter);
   const container = document.getElementById('hist-items');
+
   if(filtered.length===0){
     container.innerHTML='<div class="hist-empty">No hay materiales en esta categoria</div>';
     return;
   }
+
+  // Group by month/year
+  const folders = {};
+  filtered.forEach(h=>{
+    const mk = getMonthKey(h.dateISO);
+    if(!folders[mk]) folders[mk] = [];
+    folders[mk].push(h);
+  });
+
   const labels = {approved:'Aprobado',changes:'Con cambios',rejected:'Rechazado'};
   const colors = {approved:'tg-g',changes:'tg-a',rejected:'tg-r'};
-  container.innerHTML = filtered.map((h,i)=>`
-    <div class="hist-item" onclick="showHistDetail(${list.indexOf(h)})">
-      <div class="hist-item-head">
-        <div class="hist-item-name">${h.name}</div>
-        <div class="tg ${colors[h.status]}">${labels[h.status]}</div>
-        <div class="hist-item-date">${h.date}</div>
-      </div>
-      <div class="hist-item-verdict">${h.verdict} · ${h.score}/100</div>
-    </div>`).join('');
+  const dotcls = {approved:'dg',changes:'da',rejected:'dr'};
+
+  let html = '';
+  Object.keys(folders).forEach(mk=>{
+    const items = folders[mk];
+    const isOpen = window._openFolders&&window._openFolders[mk];
+    html += `
+      <div class="hist-folder">
+        <div class="hist-folder-head" onclick="toggleFolder('${mk}')">
+          <span class="hist-folder-icon">${isOpen?'📂':'📁'}</span>
+          <span class="hist-folder-name">${mk}</span>
+          <span class="hist-folder-count">${items.length} material${items.length!==1?'es':''}</span>
+          <span class="hist-folder-del" onclick="event.stopPropagation();deleteFolder('${mk}')" title="Borrar carpeta">🗑</span>
+          <span class="hist-folder-arrow">${isOpen?'▲':'▼'}</span>
+        </div>
+        ${isOpen ? `<div class="hist-folder-body">${items.map(h=>{
+          const idx = list.indexOf(h);
+          return `<div class="hist-item" onclick="showHistDetail(${idx})">
+            <div class="hist-item-head">
+              <div class="dot ${dotcls[h.status]}" style="flex-shrink:0"></div>
+              <div class="hist-item-name">${h.name}</div>
+              <div class="tg ${colors[h.status]}">${labels[h.status]}</div>
+              <div class="hist-item-date">${h.date}</div>
+            </div>
+            <div class="hist-item-verdict">${h.verdict} · ${h.score}/100</div>
+          </div>`;
+        }).join('')}</div>` : ''}
+      </div>`;
+  });
+
+  container.innerHTML = html;
+}
+
+function toggleFolder(mk){
+  if(!window._openFolders) window._openFolders = {};
+  window._openFolders[mk] = !window._openFolders[mk];
+  renderHistFolders();
+}
+
+function deleteFolder(mk){
+  if(!confirm('Borrar todos los materiales de '+mk+'?')) return;
+  const key = 'piki_history_'+(_brand&&_brand.key||'guest');
+  let list = JSON.parse(localStorage.getItem(key)||'[]');
+  list = list.filter(h=>getMonthKey(h.dateISO)!==mk);
+  localStorage.setItem(key, JSON.stringify(list));
+  window._histList = list;
+  renderHistFolders();
+  updateDashboardStats();
+  toast2('Carpeta '+mk+' eliminada');
 }
 
 function showHistDetail(idx){
