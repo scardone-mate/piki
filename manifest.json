@@ -1,0 +1,22 @@
+{
+  "name": "Piki by Mate",
+  "short_name": "Piki",
+  "description": "Plataforma de gestión de marca con IA",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#F47920",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/images/logo-orange.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/logo-orange.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
