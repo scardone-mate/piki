@@ -882,11 +882,10 @@ function openCP(c){
   document.getElementById('cp-readonly-note').style.display=_adm?'none':'block';
   // Clear grids before loading new client
   document.getElementById('cp-docs').innerHTML='';
-  const cpLg=document.getElementById('cp-lg');
-  const cpRef=document.getElementById('cp-ref');
-  // Keep only the + placeholder
-  cpLg.innerHTML='<div class="at admin-upload-btn" onclick="document.getElementById('cp-lg-up').click()"><div class="ap">+</div></div>';
-  cpRef.innerHTML='<div class="at admin-upload-btn" onclick="document.getElementById('cp-ref-up').click()"><div class="ap">+</div></div>';
+  document.getElementById('cp-lg').innerHTML='<div class="at admin-upload-btn" id="cp-lg-plus"><div class="ap">+</div></div>';
+  document.getElementById('cp-ref').innerHTML='<div class="at admin-upload-btn" id="cp-ref-plus"><div class="ap">+</div></div>';
+  document.getElementById('cp-lg-plus').onclick=function(){document.getElementById('cp-lg-up').click();};
+  document.getElementById('cp-ref-plus').onclick=function(){document.getElementById('cp-ref-up').click();};
   loadCPDocs(c.key);
   gs('s-cp');
 }
