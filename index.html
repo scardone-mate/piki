@@ -820,42 +820,97 @@ async function loadIDB(ck){
   }catch(e){return[];}
 }
 
-async function loadCLs(){
-  await DB.load();
-  const list=document.getElementById('cl-list');list.innerHTML='';
-  if(DB.c.length===0){list.innerHTML='<div style="text-align:center;padding:2rem;color:#aaa;font-size:13px">No hay clientes. Crea el primero.</div>';return;}
-  DB.c.forEach(c=>{
-    const card=document.createElement('div');card.className='clcard';
-    const planLabels = {basic:'Basico',pro:'Pro',enterprise:'Enterprise'};
-    const planLabel = planLabels[c.plan||'pro']||'Pro';
-    card.innerHTML=`
-      <div class="clav" style="background:${c.color};cursor:pointer" onclick="openCP(window.__cl_${c.key})">${c.initials}</div>
-      <div style="flex:1;cursor:pointer" onclick="openCP(window.__cl_${c.key})">
-        <div style="font-size:14px;font-weight:700;color:var(--dk)">${c.name}</div>
-        <div style="font-size:11px;color:#aaa">${c.industry||''}${c.email?' · '+c.email:''} · ${planLabel}</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <div onclick="editClient('${c.key}')" style="font-size:12px;color:var(--o);cursor:pointer;padding:4px 8px;border:1px solid rgba(244,121,32,.3);border-radius:6px;white-space:nowrap">Editar</div>
-        <div style="font-size:18px;color:#ccc;cursor:pointer" onclick="openCP(window.__cl_${c.key})">&#8250;</div>
-      </div>`;
-    window['__cl_'+c.key] = c;
-    list.appendChild(card);
+async function loadCompanies(){
+  const list = document.getElementById('cl-list');
+  list.innerHTML = '<div style="text-align:center;padding:1rem;color:#aaa;font-size:12px">Cargando...</div>';
+  try{
+    const companies = await api('/api/companies');
+    const brands = await api('/api/brands');
+    list.innerHTML = '';
+
+    if(!companies||companies.length===0){
+      list.innerHTML='<div style="text-align:center;padding:2rem;color:#aaa;font-size:13px">No hay empresas. Crea la primera.</div>';
+      return;
+    }
+
+    const brandsByCompany = {};
+    (brands||[]).forEach(b=>{
+      const cid = b.company_id||'none';
+      if(!brandsByCompany[cid]) brandsByCompany[cid]=[];
+      brandsByCompany[cid].push(b);
+    });
+
+    companies.forEach(company=>{
+      const compBrands = brandsByCompany[company.id]||[];
+      const section = document.createElement('div');
+      section.style.marginBottom='.875rem';
+
+      const brandsHTML = compBrands.map(b=>{
+        const bJSON = JSON.stringify(b).replace(/"/g,"'");
+        return `<div class="clcard" style="margin-left:1rem;margin-bottom:.35rem;padding:.625rem .875rem" onclick='openCP(${bJSON})'>
+          <div class="clav" style="background:${b.color||'#F47920'};width:30px;height:30px;font-size:11px">${b.initials||b.name.substring(0,2).toUpperCase()}</div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--dk)">${b.name}</div>
+            <div style="font-size:10px;color:#aaa">${b.industry||''} · ${b.plan||'pro'}</div>
+          </div>
+          <div onclick="event.stopPropagation();editBrand_fn('${b.id}')" style="font-size:11px;color:var(--o);cursor:pointer;padding:3px 7px;border:1px solid rgba(244,121,32,.3);border-radius:5px">Editar</div>
+          <div style="font-size:16px;color:#ccc">›</div>
+        </div>`;
+      }).join('');
+
+      section.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem .25rem;margin-bottom:.35rem">
+          <div style="font-size:13px;font-weight:700;color:var(--dk)">🏢 ${company.name}</div>
+          <div style="display:flex;gap:6px">
+            <div onclick="showNewBrand('${company.id}','${company.name.replace(/'/g,'')}')" style="font-size:11px;color:var(--o);cursor:pointer;padding:3px 8px;border:1px solid rgba(244,121,32,.3);border-radius:5px">+ Marca</div>
+            <div onclick="editCompany_fn('${company.id}','${company.name.replace(/'/g,'')}')" style="font-size:11px;color:#888;cursor:pointer;padding:3px 8px;border:1px solid #e0e0e0;border-radius:5px">Editar</div>
+          </div>
+        </div>
+        ${brandsHTML||'<div style="font-size:11px;color:#aaa;padding:.25rem 1rem">Sin marcas — agrega la primera</div>'}`;
+      list.appendChild(section);
+    });
+  }catch(e){
+    list.innerHTML='<div style="text-align:center;padding:2rem;color:#E24B4A;font-size:12px">Error: '+e.message+'</div>';
+  }
+}
+
+// Store brands/companies for edit operations
+window._allBrands = [];
+window._allCompanies = [];
+
+function editBrand_fn(brandId){
+  api('/api/brands').then(brands=>{
+    const b = brands.find(x=>x.id===brandId);
+    if(!b) return;
+    _editingBrand = b;
+    document.getElementById('nc-modal-title').textContent = 'Editar marca';
+    document.getElementById('nc-btn').textContent = 'Guardar cambios';
+    document.getElementById('nc-btn').onclick = saveBrandEdit;
+    document.getElementById('nc-n').value = b.name||'';
+    document.getElementById('nc-e').value = '';
+    document.getElementById('nc-i').value = b.industry||'';
+    document.getElementById('plan-selector').style.display='flex';
+    const planRadio = document.querySelector('input[name="nc-plan"][value="'+(b.plan||'pro')+'"]');
+    if(planRadio) planRadio.checked = true;
+    document.getElementById('nc-modal').classList.add('on');
   });
 }
-let _editKey = null;
 
-function showNC(){
-  _editKey = null;
+function editCompany_fn(companyId, companyName){
+  _editingCompany = {id: companyId, name: companyName};
   _editingBrand = null;
-  _editingCompany = null;
-  document.getElementById('nc-modal-title').textContent = 'Nueva empresa';
-  document.getElementById('nc-btn').textContent = 'Crear empresa';
-  document.getElementById('nc-btn').onclick = createCompany;
-  ['nc-n','nc-e','nc-i'].forEach(id=>document.getElementById(id).value='');
-  // Hide plan selector for company creation
+  document.getElementById('nc-modal-title').textContent = 'Editar empresa';
+  document.getElementById('nc-btn').textContent = 'Guardar cambios';
+  document.getElementById('nc-btn').onclick = saveCompanyEdit;
+  document.getElementById('nc-n').value = companyName;
+  document.getElementById('nc-e').value = '';
+  document.getElementById('nc-i').value = '';
   document.getElementById('plan-selector').style.display='none';
   document.getElementById('nc-modal').classList.add('on');
 }
+
+async function loadCLs(){ await loadCompanies(); }
+
 
 async function createCompany(){
   const name = document.getElementById('nc-n').value.trim();
