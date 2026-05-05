@@ -309,7 +309,7 @@ body{background:var(--bg);min-height:100vh}
   <div class="main" style="max-width:720px;margin:0 auto;width:100%">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem">
       <div><div class="ptitle">Clientes <span>activos</span></div><div style="font-size:12px;color:#aaa">Selecciona un cliente</div></div>
-      <button class="btn-o" style="width:auto;padding:8px 16px;margin:0" onclick="showNC()">+ Nuevo cliente</button>
+      <button class="btn-o" style="width:auto;padding:8px 16px;margin:0" onclick="showNC()">+ Nueva empresa</button>
     </div>
     <div id="cl-list"><div style="text-align:center;padding:2rem;color:#aaa;font-size:13px">No hay clientes. Crea el primero.</div></div>
   </div>
@@ -431,12 +431,15 @@ body{background:var(--bg);min-height:100vh}
 <div class="toast" id="toast-el"></div>
 
 <script>
-const DB={
-  c:JSON.parse(localStorage.getItem('piki_v5_c')||'[]'),
-  r:JSON.parse(localStorage.getItem('piki_v5_r')||'{}'),
-  save(){localStorage.setItem('piki_v5_c',JSON.stringify(this.c));localStorage.setItem('piki_v5_r',JSON.stringify(this.r))},
-  byEmail(e){const k=this.r[e.toLowerCase()];return k?this.c.find(x=>x.key===k):null}
-};
+const WORKER = 'https://piki-analyze.scardone.workers.dev';
+
+async function api(path, method='GET', body=null){
+  const opts = { method, headers:{'Content-Type':'application/json'} };
+  if(body) opts.body = JSON.stringify(body);
+  const r = await fetch(WORKER+path, opts);
+  const text = await r.text();
+  return text ? JSON.parse(text) : null;
+}
 let _adm=false,_brand=null,_cc=null;
 let _fb64=null,_ftype=null,_fup=false,_isVid=false,_fdisplay=null;
 let _afb64=null,_aftype=null,_afup=false,_amode='full',_mode='full';
@@ -450,18 +453,61 @@ function gs(id){
   if(el){el.style.display='flex';el.classList.add('on');}
 }
 
-function doLogin(){
+function selectBrand(brand){
+  _brand = brand;
+  _brand.key = brand.id;
+  _brand.limit = brand.limit_analyses||200;
+  document.getElementById('db-badge').textContent = brand.name;
+  const av = document.getElementById('db-av');
+  av.textContent = brand.initials||brand.name.substring(0,2).toUpperCase();
+  av.style.background = brand.color||'#F47920';
+  document.getElementById('h-av').textContent = brand.initials||brand.name.substring(0,2).toUpperCase();
+  document.getElementById('h-av').style.background = brand.color||'#F47920';
+  document.getElementById('h-name').textContent = brand.name;
+  const planNames={basic:'Plan Basico · 50 analisis/mes',pro:'Plan Profesional · 200 analisis/mes',enterprise:'Plan Enterprise · Ilimitado'};
+  document.getElementById('h-ind').textContent = planNames[brand.plan||'pro'];
+  loadClientLogo(brand.id);
+  setTimeout(()=>{
+    const hkey='piki_history_'+brand.id;
+    const hlist=JSON.parse(localStorage.getItem(hkey)||'[]');
+    document.getElementById('st-ap').textContent=hlist.filter(h=>h.status==='approved').length||0;
+    document.getElementById('st-rv').textContent=hlist.filter(h=>h.status==='changes').length||0;
+    document.getElementById('st-out').textContent=hlist.filter(h=>h.status==='rejected').length||0;
+    renderHomeHistory(hlist.slice(0,5));
+  },100);
+  goP('home');gs('s-dash');
+}
+
+function showBrandSelector(brands){
+  // Show modal to select which brand to access
+  const modal = document.getElementById('nc-modal');
+  document.getElementById('nc-modal-title').textContent = 'Seleccioná tu marca';
+  const content = `<div style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:1rem">
+    ${brands.map(b=>`<div onclick="selectBrand(${JSON.stringify(b).replace(/"/g,'&quot;')});document.getElementById('nc-modal').classList.remove('on');goP('home');gs('s-dash')" 
+      style="display:flex;align-items:center;gap:10px;padding:.75rem;border:1px solid #e0e0e0;border-radius:8px;cursor:pointer">
+      <div style="width:36px;height:36px;border-radius:50%;background:${b.color||'#F47920'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff">${b.initials||b.name.substring(0,2).toUpperCase()}</div>
+      <div><div style="font-size:14px;font-weight:700;color:#2C2C2A">${b.name}</div><div style="font-size:11px;color:#aaa">${b.company?b.company.name:''}</div></div>
+    </div>`).join('')}
+  </div>`;
+  document.querySelector('#nc-modal .modal').innerHTML = `<div class="mh"><div class="mht">Selecciona tu marca</div><span class="mx" onclick="closeNCModal()">✕</span></div>${content}`;
+  modal.classList.add('on');
+}
+
+async function doLogin(){
   const email=document.getElementById('email').value.trim();
   if(!email){toast2('Ingresa tu email');return;}
   _adm=email.includes('@matecr.com');
-  if(_adm){loadCLs();gs('s-admin');return;}
-  const c=DB.byEmail(email);
-  if(c){
-    _brand=c;
-    document.getElementById('db-badge').textContent=c.name;
-    const av=document.getElementById('db-av');av.textContent=c.initials;av.style.background=c.color;
-    document.getElementById('h-av').textContent=c.initials;document.getElementById('h-av').style.background=c.color;
-    document.getElementById('h-name').textContent=c.name;
+  if(_adm){await loadCompanies();gs('s-admin');return;}
+  const brands = await api('/api/brands-by-email?email='+encodeURIComponent(email));
+  if(brands && brands.length > 0){
+    if(brands.length === 1){
+      selectBrand(brands[0]);
+    } else {
+      // Multiple brands — show brand selector
+      showBrandSelector(brands);
+      return;
+    }
+    const c = _brand;
     const planNames={basic:'Plan Basico · 50 analisis/mes',pro:'Plan Profesional · 200 analisis/mes',enterprise:'Plan Enterprise · Ilimitado'};
     document.getElementById('h-ind').textContent=planNames[c.plan||'pro']||'Bienvenido a tu plataforma de marca';
     _brand.limit = c.limit||200;
@@ -608,11 +654,19 @@ function saveToHistory(action, result){
     // Note: images not stored to save space
   });
   try {
-    localStorage.setItem(key, JSON.stringify(list.slice(0,50)));
-  } catch(e) {
-    // If still too large, save without recs
-    localStorage.setItem(key, JSON.stringify(list.slice(0,20).map(h=>({...h,recs:h.recs&&h.recs.slice(0,3)}))));
+    if(_brand&&_brand.id){
+    DB.saveHistory({
+      brand_id: _brand.id||_brand.key,
+      material_name: window._uploadedFileName||'Material',
+      status,
+      verdict: result&&result.verdict||'',
+      score: result&&result.score||0,
+      color: result&&result.color||'amber',
+      recs: result&&result.recs||[]
+    }).catch(()=>{});
   }
+  // Also keep local for immediate display
+  try{localStorage.setItem(key, JSON.stringify(list.slice(0,20)));}catch(e){}
   updateDashboardStats();
 }
 
@@ -770,7 +824,8 @@ async function loadIDB(ck){
   }catch(e){return[];}
 }
 
-function loadCLs(){
+async function loadCLs(){
+  await DB.load();
   const list=document.getElementById('cl-list');list.innerHTML='';
   if(DB.c.length===0){list.innerHTML='<div style="text-align:center;padding:2rem;color:#aaa;font-size:13px">No hay clientes. Crea el primero.</div>';return;}
   DB.c.forEach(c=>{
@@ -795,11 +850,27 @@ let _editKey = null;
 
 function showNC(){
   _editKey = null;
-  document.getElementById('nc-modal-title').textContent = 'Nuevo cliente';
-  document.getElementById('nc-btn').textContent = 'Crear cliente';
-  document.getElementById('nc-btn').onclick = createC;
+  _editingBrand = null;
+  _editingCompany = null;
+  document.getElementById('nc-modal-title').textContent = 'Nueva empresa';
+  document.getElementById('nc-btn').textContent = 'Crear empresa';
+  document.getElementById('nc-btn').onclick = createCompany;
   ['nc-n','nc-e','nc-i'].forEach(id=>document.getElementById(id).value='');
+  // Hide plan selector for company creation
+  document.getElementById('plan-selector').style.display='none';
   document.getElementById('nc-modal').classList.add('on');
+}
+
+async function createCompany(){
+  const name = document.getElementById('nc-n').value.trim();
+  if(!name){toast2('Ingresa el nombre de la empresa');return;}
+  try{
+    await api('/api/companies','POST',{name});
+    closeNCModal();
+    document.getElementById('plan-selector').style.display='flex';
+    loadCompanies();
+    toast2('Empresa '+name+' creada ✓');
+  }catch(e){toast2('Error: '+e.message);}
 }
 
 function editClient(key){
@@ -818,7 +889,7 @@ function editClient(key){
   document.getElementById('nc-modal').classList.add('on');
 }
 
-function saveEditClient(){
+async function saveEditClient(){
   const c = DB.c.find(x=>x.key===_editKey);
   if(!c) return;
   const name = document.getElementById('nc-n').value.trim();
@@ -848,7 +919,7 @@ function closeNCModal(){
   document.getElementById('nc-modal').classList.remove('on');
   _editKey = null;
 }
-function createC(){
+async function createC(){
   const name=document.getElementById('nc-n').value.trim();if(!name){toast2('Ingresa el nombre');return;}
   const email=document.getElementById('nc-e').value.trim();
   const industry=document.getElementById('nc-i').value.trim();
@@ -858,16 +929,19 @@ function createC(){
   const planEl = document.querySelector('input[name="nc-plan"]:checked');
   const plan = planEl ? planEl.value : 'pro';
   const planLimits = {basic:50, pro:200, enterprise:999999};
-  const key='cl_'+Date.now();
-  DB.c.push({key,name,initials,color,industry,email,plan,limit:planLimits[plan],approved:0,review:0,rejected:0});
-  if(email)DB.r[email.toLowerCase()]=key;
-  DB.save();
-  document.getElementById('nc-modal').classList.remove('on');
-  ['nc-n','nc-e','nc-i'].forEach(id=>document.getElementById(id).value='');
-  loadCLs();toast2('Cliente '+name+' creado ✓');
+  const clientData = {name,initials,color,industry,email,plan,limit_analyses:planLimits[plan]};
+  try{
+    const created = await DB.create(clientData);
+    document.getElementById('nc-modal').classList.remove('on');
+    ['nc-n','nc-e','nc-i'].forEach(id=>document.getElementById(id).value='');
+    loadCLs();
+    toast2('Cliente '+name+' creado ✓');
+  }catch(e){
+    toast2('Error creando cliente: '+e.message);
+  }
 }
 function openCP(c){
-  _cc=c;document.getElementById('cp-name').textContent=c.name;
+  _cc=c;_cc.key=c.id;document.getElementById('cp-name').textContent=c.name;
   const tot=(c.approved||0)+(c.review||0)+(c.rejected||0);
   document.getElementById('cp-tot').textContent=tot;
   document.getElementById('cp-ap').textContent=c.approved||0;
@@ -886,28 +960,49 @@ function openCP(c){
   document.getElementById('cp-ref').innerHTML='<div class="at admin-upload-btn" id="cp-ref-plus"><div class="ap">+</div></div>';
   document.getElementById('cp-lg-plus').onclick=function(){document.getElementById('cp-lg-up').click();};
   document.getElementById('cp-ref-plus').onclick=function(){document.getElementById('cp-ref-up').click();};
-  loadCPDocs(c.key);
+  loadCPDocs(c.id||c.key);
   gs('s-cp');
 }
-async function loadCPDocs(key){
+async function loadCPDocs(clientKey){
   try{
-    const docs=await loadIDB(key);
+    // Try Supabase first
+    let docs = [];
+    if(_cc&&_cc.id){
+      const adata = await api('/api/assets?brand_id='+(_cc.id||_cc.key));
+      docs = adata||[];
+    } else {
+      // Fallback to IDB
+      docs = await loadIDB(clientKey);
+    }
     const dl=document.getElementById('cp-docs');dl.innerHTML='';
-    docs.filter(d=>d.name!=='__logo__'&&d.name!=='__ref__').forEach(d=>{
+    docs.filter(d=>(d.name||d.asset_type)!=='logo'&&d.asset_type!=='logo').forEach(d=>{
+      const dname = d.name||'Documento';
+      const did = d.id||null;
       const row=document.createElement('div');row.className='dr2';
-      row.innerHTML=`<span style="font-size:14px">&#128196;</span><span class="dn">${d.name}</span><span class="dd admin-upload-btn" onclick="deleteDoc(this,'${d.name}')">&#10005;</span>`;
+      row.innerHTML=`<span style="font-size:14px">&#128196;</span><span class="dn">${dname}</span><span class="dd admin-upload-btn" onclick="deleteDocById('${did}','${dname}',this)">&#10005;</span>`;
       dl.appendChild(row);
     });
-    const logo=docs.find(d=>d.name==='__logo__');
+    const logo=docs.find(d=>d.asset_type==='logo'||d.name==='__logo__');
     if(logo){
       const grid=document.getElementById('cp-lg');
       const ph=grid.querySelector('.at:last-child');
       const t=document.createElement('div');t.className='at';t.style.position='relative';
-      t.innerHTML=`<img src="${logo.data}" alt="logo" style="width:100%;height:100%;object-fit:contain;padding:3px"/>
-        <div onclick="deleteDoc(this,'__logo__');this.parentElement.remove()" class="admin-upload-btn" style="position:absolute;top:2px;right:2px;width:16px;height:16px;background:#E24B4A;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;cursor:pointer">✕</div>`;
+      const src=logo.data;
+      t.innerHTML=`<img src="${src}" alt="logo" style="width:100%;height:100%;object-fit:contain;padding:3px"/>
+        <div onclick="deleteDocById('${logo.id||''}','__logo__',this);this.parentElement.remove()" class="admin-upload-btn" style="position:absolute;top:2px;right:2px;width:16px;height:16px;background:#E24B4A;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;cursor:pointer">✕</div>`;
       grid.insertBefore(t,ph);
     }
-  }catch(e){}
+  }catch(e){console.error('loadCPDocs error:',e);}
+}
+
+async function deleteDocById(id, name, el){
+  if(el) el.closest('.dr2,.at') && el.closest('.dr2') ? el.closest('.dr2').remove() : null;
+  if(id && id !== 'null'){
+    try{ await DB.deleteAsset(id); toast2('Eliminado'); }catch(e){}
+  } else {
+    // Fallback IDB
+    deleteDoc(el, name);
+  }
 }
 function getMonthKey(dateISO){
   if(!dateISO) return 'SIN-FECHA';
@@ -916,9 +1011,28 @@ function getMonthKey(dateISO){
   return months[d.getMonth()]+'-'+String(d.getFullYear()).slice(2);
 }
 
-function loadHistory(){
-  const key = 'piki_history_'+(_brand&&_brand.key||'guest');
-  const list = JSON.parse(localStorage.getItem(key)||'[]');
+async function loadHistory(){
+  let list = [];
+  if(_brand&&_brand.id){
+    try{
+      const hdata = await api('/api/history?brand_id='+(_brand.id||_brand.key));
+      list = hdata||[];
+    }catch(e){
+      // fallback to localStorage
+      const key='piki_history_'+(_brand.key||_brand.id||'guest');
+      list = JSON.parse(localStorage.getItem(key)||'[]');
+    }
+  } else {
+    const key='piki_history_'+(_brand&&(_brand.key||_brand.id)||'guest');
+    list = JSON.parse(localStorage.getItem(key)||'[]');
+  }
+  // Normalize field names (Supabase uses snake_case)
+  list = list.map(h=>({
+    ...h,
+    name: h.name||h.material_name||'Material',
+    dateISO: h.dateISO||h.date_iso||h.created_at,
+    date: h.date||(h.date_iso||h.created_at ? new Date(h.date_iso||h.created_at).toLocaleDateString('es') : ''),
+  }));
   window._histList = list;
   window._histFilter = 'all';
   renderHistFolders();
@@ -1023,7 +1137,7 @@ function showHistDetail(idx){
   document.getElementById('hist-modal').classList.add('on');
 }
 
-function goAdmin(){gs('s-admin');loadCLs();}
+function goAdmin(){gs('s-admin');loadCompanies();}
 
 function handleAdmFile(e){
   const f=e.target.files[0];if(!f)return;
@@ -1062,7 +1176,16 @@ function addCPA(e,gridId,type){
       t.innerHTML=`<img src="${ev.target.result}" title="${f.name}" style="width:100%;height:100%;object-fit:contain;padding:3px"/>
         <div onclick="this.parentElement.remove();deleteIDBAsset('${f.name}')" style="position:absolute;top:2px;right:2px;width:16px;height:16px;background:#E24B4A;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;cursor:pointer;line-height:1">✕</div>`;
       grid.insertBefore(t,ph);
-      if(type==='logo'&&_cc&&_cc.key)saveIDB(_cc.key,'__logo__',f.type,ev.target.result).then(()=>toast2('Logo guardado ✓')).catch(()=>{});
+      if(type==='logo'&&_cc){
+        const assetData={brand_id:_cc.id||_cc.key,name:'__logo__',type:f.type,data:ev.target.result,asset_type:'logo'};
+        if(_cc.id){
+          DB.saveAsset(assetData).then(()=>toast2('Logo guardado ✓')).catch(()=>{
+            if(_cc.key) saveIDB(_cc.key,'__logo__',f.type,ev.target.result);
+          });
+        } else if(_cc.key){
+          saveIDB(_cc.key,'__logo__',f.type,ev.target.result).then(()=>toast2('Logo guardado ✓'));
+        }
+      }
     };r.readAsDataURL(f);
   });e.target.value='';
 }
@@ -1083,7 +1206,28 @@ function addCPDoc(e){
     const fname=f.name;
     row.innerHTML=`<span style="font-size:14px">&#128196;</span><span class="dn">${f.name}</span><span class="ds">${sz}</span><span class="dd" onclick="deleteDoc(this,'${f.name}')">&#10005;</span>`;
     document.getElementById('cp-docs').appendChild(row);
-    if(_cc&&_cc.key){const r2=new FileReader();r2.onload=ev=>{saveIDB(_cc.key,f.name,f.type,ev.target.result).then(()=>toast2('✓ '+f.name+' guardado')).catch(()=>toast2('Error guardando '+f.name));};r2.readAsDataURL(f);}
+    if(_cc){
+      const r2=new FileReader();
+      r2.onload=ev=>{
+        const assetData={
+          brand_id: _cc.id||_cc.key,
+          name: f.name,
+          type: f.type,
+          data: ev.target.result,
+          asset_type: 'document'
+        };
+        if(_cc.id){
+          DB.saveAsset(assetData).then(()=>toast2('✓ '+f.name+' guardado')).catch(()=>{
+            // Fallback to IDB
+            if(_cc.key) saveIDB(_cc.key,f.name,f.type,ev.target.result);
+            toast2('✓ '+f.name+' guardado localmente');
+          });
+        } else if(_cc.key){
+          saveIDB(_cc.key,f.name,f.type,ev.target.result).then(()=>toast2('✓ '+f.name+' guardado')).catch(()=>toast2('Error guardando '+f.name));
+        }
+      };
+      r2.readAsDataURL(f);
+    }
   });e.target.value='';
 }
 function saveCPAs(){const n=document.getElementById('cp-savn');n.textContent='✓ Guardado correctamente';n.style.color='#3B6D11';setTimeout(()=>{n.textContent='Archivos guardados en esta sesion';n.style.color='';},2500);}
