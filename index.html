@@ -441,6 +441,7 @@ async function api(path, method='GET', body=null){
   return text ? JSON.parse(text) : null;
 }
 let _adm=false,_brand=null,_cc=null;
+let _editKey=null,_editingBrand=null,_editingCompany=null;
 let _fb64=null,_ftype=null,_fup=false,_isVid=false,_fdisplay=null;
 let _afb64=null,_aftype=null,_afup=false,_amode='full',_mode='full';
 
@@ -818,6 +819,94 @@ async function loadIDB(ck){
       req.onerror=rej;
     });
   }catch(e){return[];}
+}
+
+function showNC(){
+  _editKey = null;
+  _editingBrand = null;
+  _editingCompany = null;
+  document.getElementById('nc-modal-title').textContent = 'Nueva empresa';
+  document.getElementById('nc-btn').textContent = 'Crear empresa';
+  document.getElementById('nc-btn').onclick = createCompany;
+  ['nc-n','nc-e','nc-i'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('plan-selector').style.display='none';
+  document.getElementById('nc-modal').classList.add('on');
+}
+
+async function createCompany(){
+  const name = document.getElementById('nc-n').value.trim();
+  if(!name){toast2('Ingresa el nombre de la empresa');return;}
+  try{
+    await api('/api/companies','POST',{name});
+    closeNCModal();
+    document.getElementById('plan-selector').style.display='flex';
+    loadCompanies();
+    toast2('Empresa '+name+' creada');
+  }catch(e){toast2('Error: '+e.message);}
+}
+
+function showNewBrand(companyId, companyName){
+  _editingBrand = null;
+  _editingCompany = null;
+  document.getElementById('nc-modal-title').textContent = 'Nueva marca · '+companyName;
+  document.getElementById('nc-btn').textContent = 'Crear marca';
+  document.getElementById('nc-btn').onclick = ()=>createBrand(companyId);
+  ['nc-n','nc-e','nc-i'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('plan-selector').style.display='flex';
+  document.querySelector('input[name="nc-plan"][value="pro"]').checked = true;
+  document.getElementById('nc-modal').classList.add('on');
+}
+
+async function createBrand(companyId){
+  const name = document.getElementById('nc-n').value.trim();
+  if(!name){toast2('Ingresa el nombre');return;}
+  const email = document.getElementById('nc-e').value.trim();
+  const industry = document.getElementById('nc-i').value.trim();
+  const planEl = document.querySelector('input[name="nc-plan"]:checked');
+  const plan = planEl ? planEl.value : 'pro';
+  const planLimits = {basic:50, pro:200, enterprise:999999};
+  const initials = name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+  const cols = ['#6B3FA0','#1A6B4A','#C0392B','#2C7BB6','#D47C0A','#F47920'];
+  const color = cols[Math.floor(Math.random()*cols.length)];
+  try{
+    const res = await api('/api/brands','POST',{name,initials,color,industry,plan,limit_analyses:planLimits[plan],company_id:companyId});
+    const brand = Array.isArray(res) ? res[0] : res;
+    if(email && brand && brand.id){
+      try{
+        const userRes = await api('/api/users','POST',{email,name});
+        const user = Array.isArray(userRes) ? userRes[0] : userRes;
+        if(user && user.id){
+          await api('/api/brand-users','POST',{brand_id:brand.id,user_id:user.id,role:'member'});
+        }
+      }catch(e){ console.warn('User creation error:',e); }
+    }
+    closeNCModal();
+    loadCompanies();
+    toast2('Marca '+name+' creada');
+  }catch(e){toast2('Error: '+e.message);}
+}
+
+async function saveBrandEdit(){
+  const name = document.getElementById('nc-n').value.trim();
+  if(!name || !_editingBrand){return;}
+  const industry = document.getElementById('nc-i').value.trim();
+  const planEl = document.querySelector('input[name="nc-plan"]:checked');
+  const plan = planEl ? planEl.value : 'pro';
+  const planLimits = {basic:50, pro:200, enterprise:999999};
+  const initials = name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+  try{
+    await api('/api/brands/'+_editingBrand.id,'PATCH',{name,industry,plan,limit_analyses:planLimits[plan],initials});
+    closeNCModal();loadCompanies();toast2('Marca actualizada');
+  }catch(e){toast2('Error: '+e.message);}
+}
+
+async function saveCompanyEdit(){
+  const name = document.getElementById('nc-n').value.trim();
+  if(!name || !_editingCompany){return;}
+  try{
+    await api('/api/companies/'+_editingCompany.id,'PATCH',{name});
+    closeNCModal();loadCompanies();toast2('Empresa actualizada');
+  }catch(e){toast2('Error: '+e.message);}
 }
 
 async function loadCompanies(){
