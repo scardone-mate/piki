@@ -308,10 +308,31 @@ body{background:var(--bg);min-height:100vh}
   </div>
   <div class="main" style="max-width:720px;margin:0 auto;width:100%">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem">
-      <div><div class="ptitle">Clientes <span>activos</span></div><div style="font-size:12px;color:#aaa">Selecciona un cliente</div></div>
+      <div><div class="ptitle">Empresas <span>activas</span></div><div style="font-size:12px;color:#aaa">Selecciona una empresa para ver sus marcas</div></div>
       <button class="btn-o" style="width:auto;padding:8px 16px;margin:0" onclick="showNC()">+ Nueva empresa</button>
     </div>
-    <div id="cl-list"><div style="text-align:center;padding:2rem;color:#aaa;font-size:13px">No hay clientes. Crea el primero.</div></div>
+    <div id="cl-list"><div style="text-align:center;padding:2rem;color:#aaa;font-size:13px">No hay empresas. Crea la primera.</div></div>
+  </div>
+</div>
+
+<!-- Company Panel -->
+<div id="s-company" style="display:none;flex-direction:column;min-height:100vh;background:var(--bg)">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:18px;cursor:pointer;color:var(--o);font-weight:700" onclick="goAdmin()">&#8592;</span>
+      <div>
+        <div style="font-size:14px;font-weight:700;color:var(--dk)" id="company-panel-name">Empresa</div>
+        <div style="font-size:11px;color:#aaa">Panel de empresa</div>
+      </div>
+    </div>
+    <div class="tbadge">Admin · Mate</div>
+  </div>
+  <div class="main" style="max-width:680px;margin:0 auto;width:100%">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem">
+      <div><div class="ptitle">Marcas <span>activas</span></div><div style="font-size:12px;color:#aaa" id="company-panel-email"></div></div>
+      <button class="btn-o" style="width:auto;padding:8px 16px;margin:0" id="add-brand-btn">+ Nueva marca</button>
+    </div>
+    <div id="company-brands-list"><div style="text-align:center;padding:2rem;color:#aaa;font-size:13px">No hay marcas. Crea la primera.</div></div>
   </div>
 </div>
 
@@ -404,9 +425,9 @@ body{background:var(--bg);min-height:100vh}
 <div class="modal-bg" id="nc-modal">
   <div class="modal">
     <div class="mh"><div class="mht" id="nc-modal-title">Nuevo cliente</div><span class="mx" onclick="closeNCModal()">&#10005;</span></div>
-    <div class="mf"><label class="mfl">Nombre de la marca</label><input class="mfi" type="text" id="nc-n" placeholder="Ej: Alma"/></div>
-    <div class="mf"><label class="mfl">Email del cliente</label><input class="mfi" type="email" id="nc-e" placeholder="contacto@alma.com"/></div>
-    <div class="mf"><label class="mfl">Industria</label><input class="mfi" type="text" id="nc-i" placeholder="Moda, Gastronomia..."/></div>
+    <div class="mf"><label class="mfl" id="nc-n-label">Nombre</label><input class="mfi" type="text" id="nc-n" placeholder="Ej: Alma"/></div>
+    <div class="mf" id="nc-e-wrap"><label class="mfl">Email del usuario titular</label><input class="mfi" type="email" id="nc-e" placeholder="contacto@alma.com"/></div>
+    <div class="mf" id="nc-i-wrap"><label class="mfl">Industria</label><input class="mfi" type="text" id="nc-i" placeholder="Moda, Gastronomia..."/></div>
     <div class="mf" style="margin-bottom:1rem">
       <label class="mfl">Plan</label>
       <div style="display:flex;flex-direction:column;gap:6px" id="plan-selector">
@@ -830,19 +851,70 @@ function showNC(){
   document.getElementById('nc-btn').onclick = createCompany;
   ['nc-n','nc-e','nc-i'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('plan-selector').style.display='none';
+  document.getElementById('nc-e-wrap').style.display='block';
+  document.getElementById('nc-i-wrap').style.display='none';
+  document.getElementById('nc-n-label').textContent='Razon social / Nombre de la empresa';
+  document.getElementById('nc-n').placeholder='Ej: Grupo X S.A.';
+  const emailLabel = document.querySelector('#nc-e-wrap .mfl');
+  if(emailLabel) emailLabel.textContent = 'Email del titular principal';
+  document.getElementById('nc-e').placeholder='titular@empresa.com';
   document.getElementById('nc-modal').classList.add('on');
 }
 
 async function createCompany(){
   const name = document.getElementById('nc-n').value.trim();
+  const email = document.getElementById('nc-e').value.trim();
   if(!name){toast2('Ingresa el nombre de la empresa');return;}
   try{
-    await api('/api/companies','POST',{name});
+    const res = await api('/api/companies','POST',{name});
+    const company = Array.isArray(res) ? res[0] : res;
+    // Create titular user if email provided
+    if(email && company && company.id){
+      try{
+        await api('/api/users','POST',{email, name, role:'company_owner', company_id: company.id});
+      }catch(e){ console.warn('User creation:', e); }
+    }
     closeNCModal();
     document.getElementById('plan-selector').style.display='flex';
-    loadCompanies();
     toast2('Empresa '+name+' creada');
+    // Open company panel immediately
+    openCompanyPanel(company);
+    loadCompanies();
   }catch(e){toast2('Error: '+e.message);}
+}
+
+function openCompanyPanel(company){
+  window._currentCompany = company;
+  document.getElementById('company-panel-name').textContent = company.name;
+  document.getElementById('company-panel-email').textContent = company.email||'';
+  document.getElementById('add-brand-btn').onclick = ()=>showNewBrand(company.id, company.name);
+  loadCompanyBrands(company.id);
+  document.getElementById('s-company').style.display='flex';
+  document.getElementById('s-admin').style.display='none';
+}
+
+async function loadCompanyBrands(companyId){
+  const list = document.getElementById('company-brands-list');
+  list.innerHTML = '<div style="text-align:center;padding:1rem;color:#aaa;font-size:12px">Cargando...</div>';
+  try{
+    const brands = await api('/api/brands?company_id='+companyId);
+    if(!brands||brands.length===0){
+      list.innerHTML='<div style="text-align:center;padding:2rem;color:#aaa;font-size:13px">No hay marcas. Crea la primera.</div>';
+      return;
+    }
+    list.innerHTML = brands.map(b=>`
+      <div class="clcard" onclick='openCP(${JSON.stringify(b).replace(/"/g,"'")})'>
+        <div class="clav" style="background:${b.color||'#F47920'}">${b.initials||b.name.substring(0,2).toUpperCase()}</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:700;color:var(--dk)">${b.name}</div>
+          <div style="font-size:11px;color:#aaa">${b.industry||''} · ${b.plan||'pro'}</div>
+        </div>
+        <div onclick="event.stopPropagation();editBrand_fn('${b.id}')" style="font-size:11px;color:var(--o);cursor:pointer;padding:3px 7px;border:1px solid rgba(244,121,32,.3);border-radius:5px;margin-right:4px">Editar</div>
+        <div style="font-size:18px;color:#ccc">›</div>
+      </div>`).join('');
+  }catch(e){
+    list.innerHTML='<div style="text-align:center;padding:2rem;color:#E24B4A;font-size:12px">Error: '+e.message+'</div>';
+  }
 }
 
 function showNewBrand(companyId, companyName){
@@ -853,6 +925,10 @@ function showNewBrand(companyId, companyName){
   document.getElementById('nc-btn').onclick = ()=>createBrand(companyId);
   ['nc-n','nc-e','nc-i'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('plan-selector').style.display='flex';
+  document.getElementById('nc-e-wrap').style.display='block';
+  document.getElementById('nc-i-wrap').style.display='block';
+  document.getElementById('nc-n-label').textContent='Nombre de la marca';
+  document.getElementById('nc-n').placeholder='Ej: Alma';
   document.querySelector('input[name="nc-plan"][value="pro"]').checked = true;
   document.getElementById('nc-modal').classList.add('on');
 }
@@ -881,8 +957,11 @@ async function createBrand(companyId){
       }catch(e){ console.warn('User creation error:',e); }
     }
     closeNCModal();
-    loadCompanies();
     toast2('Marca '+name+' creada');
+    if(window._currentCompany){
+      loadCompanyBrands(window._currentCompany.id);
+    }
+    loadCompanies();
   }catch(e){toast2('Error: '+e.message);}
 }
 
@@ -948,7 +1027,7 @@ async function loadCompanies(){
       }).join('');
 
       section.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem .25rem;margin-bottom:.35rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem .25rem;margin-bottom:.35rem;cursor:pointer" onclick="openCompanyPanel(${JSON.stringify(company).replace(/"/g,'&quot;')})">
           <div style="font-size:13px;font-weight:700;color:var(--dk)">🏢 ${company.name}</div>
           <div style="display:flex;gap:6px">
             <div onclick="showNewBrand('${company.id}','${company.name.replace(/'/g,'')}')" style="font-size:11px;color:var(--o);cursor:pointer;padding:3px 8px;border:1px solid rgba(244,121,32,.3);border-radius:5px">+ Marca</div>
@@ -979,6 +1058,10 @@ function editBrand_fn(brandId){
     document.getElementById('nc-e').value = '';
     document.getElementById('nc-i').value = b.industry||'';
     document.getElementById('plan-selector').style.display='flex';
+    document.getElementById('nc-e-wrap').style.display='none';
+    document.getElementById('nc-i-wrap').style.display='block';
+    document.getElementById('nc-n-label').textContent='Nombre de la marca';
+    document.getElementById('nc-n').placeholder='Ej: Alma';
     const planRadio = document.querySelector('input[name="nc-plan"][value="'+(b.plan||'pro')+'"]');
     if(planRadio) planRadio.checked = true;
     document.getElementById('nc-modal').classList.add('on');
@@ -1277,7 +1360,12 @@ function showHistDetail(idx){
   document.getElementById('hist-modal').classList.add('on');
 }
 
-function goAdmin(){gs('s-admin');loadCompanies();}
+function goAdmin(){
+  document.getElementById('s-company').style.display='none';
+  document.getElementById('s-cp').style.display='none';
+  document.getElementById('s-admin').style.display='flex';
+  loadCompanies();
+}
 
 function handleAdmFile(e){
   const f=e.target.files[0];if(!f)return;
