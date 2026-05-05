@@ -880,6 +880,13 @@ function openCP(c){
   // Show/hide upload buttons based on admin status
   document.querySelectorAll('.admin-upload-btn').forEach(el=>el.style.display=_adm?'':'none');
   document.getElementById('cp-readonly-note').style.display=_adm?'none':'block';
+  // Clear grids before loading new client
+  document.getElementById('cp-docs').innerHTML='';
+  const cpLg=document.getElementById('cp-lg');
+  const cpRef=document.getElementById('cp-ref');
+  // Keep only the + placeholder
+  cpLg.innerHTML='<div class="at admin-upload-btn" onclick="document.getElementById('cp-lg-up').click()"><div class="ap">+</div></div>';
+  cpRef.innerHTML='<div class="at admin-upload-btn" onclick="document.getElementById('cp-ref-up').click()"><div class="ap">+</div></div>';
   loadCPDocs(c.key);
   gs('s-cp');
 }
@@ -887,13 +894,20 @@ async function loadCPDocs(key){
   try{
     const docs=await loadIDB(key);
     const dl=document.getElementById('cp-docs');dl.innerHTML='';
-    docs.filter(d=>d.name!=='__logo__').forEach(d=>{
+    docs.filter(d=>d.name!=='__logo__'&&d.name!=='__ref__').forEach(d=>{
       const row=document.createElement('div');row.className='dr2';
-      row.innerHTML=`<span style="font-size:14px">&#128196;</span><span class="dn">${d.name}</span>`;
+      row.innerHTML=`<span style="font-size:14px">&#128196;</span><span class="dn">${d.name}</span><span class="dd admin-upload-btn" onclick="deleteDoc(this,'${d.name}')">&#10005;</span>`;
       dl.appendChild(row);
     });
     const logo=docs.find(d=>d.name==='__logo__');
-    if(logo){const grid=document.getElementById('cp-lg');const ph=grid.querySelector('.at:last-child');const t=document.createElement('div');t.className='at';t.innerHTML=`<img src="${logo.data}" alt="logo"/>`;grid.insertBefore(t,ph);}
+    if(logo){
+      const grid=document.getElementById('cp-lg');
+      const ph=grid.querySelector('.at:last-child');
+      const t=document.createElement('div');t.className='at';t.style.position='relative';
+      t.innerHTML=`<img src="${logo.data}" alt="logo" style="width:100%;height:100%;object-fit:contain;padding:3px"/>
+        <div onclick="deleteDoc(this,'__logo__');this.parentElement.remove()" class="admin-upload-btn" style="position:absolute;top:2px;right:2px;width:16px;height:16px;background:#E24B4A;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;cursor:pointer">✕</div>`;
+      grid.insertBefore(t,ph);
+    }
   }catch(e){}
 }
 function getMonthKey(dateISO){
@@ -1045,22 +1059,47 @@ function addCPA(e,gridId,type){
   Array.from(e.target.files).forEach(f=>{
     const r=new FileReader();r.onload=ev=>{
       const grid=document.getElementById(gridId);const ph=grid.querySelector('.at:last-child');
-      const t=document.createElement('div');t.className='at';t.innerHTML=`<img src="${ev.target.result}" title="${f.name}"/>`;
+      const t=document.createElement('div');t.className='at';t.style.position='relative';
+      t.innerHTML=`<img src="${ev.target.result}" title="${f.name}" style="width:100%;height:100%;object-fit:contain;padding:3px"/>
+        <div onclick="this.parentElement.remove();deleteIDBAsset('${f.name}')" style="position:absolute;top:2px;right:2px;width:16px;height:16px;background:#E24B4A;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;cursor:pointer;line-height:1">✕</div>`;
       grid.insertBefore(t,ph);
       if(type==='logo'&&_cc&&_cc.key)saveIDB(_cc.key,'__logo__',f.type,ev.target.result).then(()=>toast2('Logo guardado ✓')).catch(()=>{});
     };r.readAsDataURL(f);
   });e.target.value='';
 }
+
+async function deleteIDBAsset(name){
+  if(!_cc||!_cc.key) return;
+  try{
+    const db=await openIDB();
+    const tx=db.transaction('docs','readwrite');
+    tx.objectStore('docs').delete(_cc.key+'__'+name);
+    toast2('Asset eliminado');
+  }catch(e){}
+}
 function addCPDoc(e){
   Array.from(e.target.files).forEach(f=>{
     const sz=f.size>1048576?(f.size/1048576).toFixed(1)+'MB':(f.size/1024).toFixed(0)+'KB';
     const row=document.createElement('div');row.className='dr2';
-    row.innerHTML=`<span style="font-size:14px">&#128196;</span><span class="dn">${f.name}</span><span class="ds">${sz}</span><span class="dd" onclick="this.parentElement.remove()">&#10005;</span>`;
+    const fname=f.name;
+    row.innerHTML=`<span style="font-size:14px">&#128196;</span><span class="dn">${f.name}</span><span class="ds">${sz}</span><span class="dd" onclick="deleteDoc(this,'${f.name}')">&#10005;</span>`;
     document.getElementById('cp-docs').appendChild(row);
     if(_cc&&_cc.key){const r2=new FileReader();r2.onload=ev=>{saveIDB(_cc.key,f.name,f.type,ev.target.result).then(()=>toast2('✓ '+f.name+' guardado')).catch(()=>toast2('Error guardando '+f.name));};r2.readAsDataURL(f);}
   });e.target.value='';
 }
 function saveCPAs(){const n=document.getElementById('cp-savn');n.textContent='✓ Guardado correctamente';n.style.color='#3B6D11';setTimeout(()=>{n.textContent='Archivos guardados en esta sesion';n.style.color='';},2500);}
+
+async function deleteDoc(el, name){
+  el.parentElement.remove();
+  if(_cc&&_cc.key){
+    try{
+      const db=await openIDB();
+      const tx=db.transaction('docs','readwrite');
+      tx.objectStore('docs').delete(_cc.key+'__'+name);
+      toast2('Documento eliminado');
+    }catch(e){}
+  }
+}
 function addAG(e,gridId){Array.from(e.target.files).forEach(f=>{const r=new FileReader();r.onload=ev=>{const grid=document.getElementById(gridId);const ph=grid.querySelector('.at:last-child');const t=document.createElement('div');t.className='at';t.innerHTML=`<img src="${ev.target.result}" title="${f.name}"/>`;grid.insertBefore(t,ph);};r.readAsDataURL(f);});e.target.value='';}
 function addDG(e,listId){Array.from(e.target.files).forEach(f=>{const sz=f.size>1048576?(f.size/1048576).toFixed(1)+'MB':(f.size/1024).toFixed(0)+'KB';const row=document.createElement('div');row.className='dr2';row.innerHTML=`<span style="font-size:14px">&#128196;</span><span class="dn">${f.name}</span><span class="ds">${sz}</span><span class="dd" onclick="this.parentElement.remove()">&#10005;</span>`;document.getElementById(listId).appendChild(row);});e.target.value='';}
 function toast2(msg,dur=3000){const t=document.getElementById('toast-el');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',dur);}
