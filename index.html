@@ -488,7 +488,7 @@ function selectBrand(brand){
   document.getElementById('h-name').textContent = brand.name;
   const planNames={basic:'Plan Basico · 50 analisis/mes',pro:'Plan Profesional · 200 analisis/mes',enterprise:'Plan Enterprise · Ilimitado'};
   document.getElementById('h-ind').textContent = planNames[brand.plan||'pro'];
-  loadClientLogo(brand.id);
+  loadLogo(brand.id);
   setTimeout(()=>{
     const hkey='piki_history_'+brand.id;
     const hlist=JSON.parse(localStorage.getItem(hkey)||'[]');
