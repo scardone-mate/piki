@@ -639,7 +639,17 @@ async function runAnalysis(){
   document.getElementById('step-res').style.display='block';
   document.getElementById('anl-el').classList.add('on');
   document.getElementById('rbox').classList.remove('on');
-  const docs=_brand&&_brand.key?await loadIDB(_brand.key):[];
+  // Load brand docs from Supabase
+  let docs = [];
+  if(_brand&&(_brand.id||_brand.key)){
+    try{
+      const assets = await api('/api/assets?brand_id='+(_brand.id||_brand.key));
+      docs = (assets||[]).filter(a=>a.asset_type!=='logo');
+    }catch(e){
+      // fallback to IDB
+      if(_brand.key) docs = await loadIDB(_brand.key);
+    }
+  }
   // Get selected aspects if in 'part' mode
   let selectedAspects = [];
   if(_mode==='part'){
@@ -870,18 +880,21 @@ async function createCompany(){
   try{
     const res = await api('/api/companies','POST',{name});
     const company = Array.isArray(res) ? res[0] : res;
-    // Create titular user if email provided
+    // Create titular user and store their info
     if(email && company && company.id){
       try{
-        await api('/api/users','POST',{email, name, role:'company_owner', company_id: company.id});
+        const userRes = await api('/api/users','POST',{email, name});
+        const user = Array.isArray(userRes) ? userRes[0] : userRes;
+        if(user && user.id){
+          company.owner_email = email;
+          company.owner_user_id = user.id;
+        }
       }catch(e){ console.warn('User creation:', e); }
     }
     closeNCModal();
     document.getElementById('plan-selector').style.display='flex';
-    // Store owner email on company object for auto-linking
     if(email) company.owner_email = email;
     toast2('Empresa '+name+' creada');
-    // Open company panel immediately
     openCompanyPanel(company);
     loadCompanies();
   }catch(e){toast2('Error: '+e.message);}
