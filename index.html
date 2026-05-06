@@ -947,25 +947,13 @@ function showNewBrand(companyId, companyName){
   document.getElementById('nc-btn').onclick = ()=>createBrand(companyId);
   ['nc-n','nc-e','nc-i'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('plan-selector').style.display='flex';
-  document.getElementById('nc-e-wrap').style.display='block';
+  document.getElementById('nc-e-wrap').style.display='none';
   document.getElementById('nc-i-wrap').style.display='block';
   document.getElementById('nc-n-label').textContent='Nombre de la marca';
   document.getElementById('nc-n').placeholder='Ej: Alma';
-  const emailLabel = document.querySelector('#nc-e-wrap .mfl');
-  if(emailLabel) emailLabel.textContent='Email del titular de la marca';
-  document.getElementById('nc-e').placeholder='titular@marca.com';
   document.querySelector('input[name="nc-plan"][value="pro"]').checked = true;
-  // Show extra emails section
-  let extraEmails = document.getElementById('nc-extra-emails');
-  if(!extraEmails){
-    extraEmails = document.createElement('div');
-    extraEmails.id = 'nc-extra-emails';
-    extraEmails.style.marginBottom='.625rem';
-    extraEmails.innerHTML = '<div id="nc-email-list"></div><div onclick="addEmailField()" style="font-size:12px;color:var(--o);cursor:pointer;margin-top:4px">+ Agregar otro usuario</div>';
-    document.getElementById('nc-e-wrap').after(extraEmails);
-  }
-  document.getElementById('nc-email-list').innerHTML='';
-  extraEmails.style.display='block';
+  const extraEmails = document.getElementById('nc-extra-emails');
+  if(extraEmails) extraEmails.style.display='none';
   document.getElementById('nc-modal').classList.add('on');
 }
 
@@ -991,29 +979,6 @@ async function createBrand(companyId){
   try{
     const res = await api('/api/brands','POST',{name,initials,color,industry,plan,limit_analyses:planLimits[plan],company_id:companyId});
     const brand = Array.isArray(res) ? res[0] : res;
-    const brandId = brand && brand.id;
-    if(brandId){
-      // Collect all emails
-      const allEmails = [email].filter(Boolean);
-      document.querySelectorAll('.nc-extra-email').forEach(inp=>{
-        if(inp.value.trim()) allEmails.push(inp.value.trim());
-      });
-      // Auto-link company owner
-      if(window._currentCompany && window._currentCompany.owner_email){
-        if(!allEmails.includes(window._currentCompany.owner_email)){
-          allEmails.unshift(window._currentCompany.owner_email);
-        }
-      }
-      for(const em of allEmails){
-        try{
-          const userRes = await api('/api/users','POST',{email:em,name});
-          const user = Array.isArray(userRes) ? userRes[0] : userRes;
-          if(user && user.id){
-            await api('/api/brand-users','POST',{brand_id:brandId,user_id:user.id,role:'member'});
-          }
-        }catch(e){ console.warn('User link error for '+em,e); }
-      }
-    }
     closeNCModal();
     toast2('Marca '+name+' creada');
     if(window._currentCompany){
