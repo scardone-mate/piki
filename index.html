@@ -878,7 +878,7 @@ async function createCompany(){
   const email = document.getElementById('nc-e').value.trim();
   if(!name){toast2('Ingresa el nombre de la empresa');return;}
   try{
-    const res = await api('/api/companies','POST',{name});
+    const res = await api('/api/companies','POST',{name, owner_email: email||null});
     const company = Array.isArray(res) ? res[0] : res;
     // Create titular user and store their info
     if(email && company && company.id){
@@ -902,7 +902,7 @@ async function createCompany(){
 
 function openCompanyPanel(company){
   window._currentCompany = company;
-  // Store owner email for auto-linking to brands
+  // owner_email is stored in the company object from Supabase
   document.getElementById('company-panel-name').textContent = company.name;
   document.getElementById('company-panel-email').textContent = company.email||'';
   document.getElementById('add-brand-btn').onclick = ()=>showNewBrand(company.id, company.name);
@@ -991,14 +991,28 @@ async function createBrand(companyId){
   try{
     const res = await api('/api/brands','POST',{name,initials,color,industry,plan,limit_analyses:planLimits[plan],company_id:companyId});
     const brand = Array.isArray(res) ? res[0] : res;
-    if(email && brand && brand.id){
-      try{
-        const userRes = await api('/api/users','POST',{email,name});
-        const user = Array.isArray(userRes) ? userRes[0] : userRes;
-        if(user && user.id){
-          await api('/api/brand-users','POST',{brand_id:brand.id,user_id:user.id,role:'member'});
+    const brandId = brand && brand.id;
+    if(brandId){
+      // Collect all emails
+      const allEmails = [email].filter(Boolean);
+      document.querySelectorAll('.nc-extra-email').forEach(inp=>{
+        if(inp.value.trim()) allEmails.push(inp.value.trim());
+      });
+      // Auto-link company owner
+      if(window._currentCompany && window._currentCompany.owner_email){
+        if(!allEmails.includes(window._currentCompany.owner_email)){
+          allEmails.unshift(window._currentCompany.owner_email);
         }
-      }catch(e){ console.warn('User creation error:',e); }
+      }
+      for(const em of allEmails){
+        try{
+          const userRes = await api('/api/users','POST',{email:em,name});
+          const user = Array.isArray(userRes) ? userRes[0] : userRes;
+          if(user && user.id){
+            await api('/api/brand-users','POST',{brand_id:brandId,user_id:user.id,role:'member'});
+          }
+        }catch(e){ console.warn('User link error for '+em,e); }
+      }
     }
     closeNCModal();
     toast2('Marca '+name+' creada');
