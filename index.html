@@ -1146,48 +1146,6 @@ async function createCompany(){
   }catch(e){toast2('Error: '+e.message);}
 }
 
-function editClient(key){
-  const c = null; // legacy
-  if(!c) return;
-  _editKey = key;
-  document.getElementById('nc-modal-title').textContent = 'Editar cliente';
-  document.getElementById('nc-btn').textContent = 'Guardar cambios';
-  document.getElementById('nc-btn').onclick = saveEditClient;
-  document.getElementById('nc-n').value = c.name||'';
-  document.getElementById('nc-e').value = c.email||'';
-  document.getElementById('nc-i').value = c.industry||'';
-  const planToSelect = c.plan||'pro';
-  const planRadio = document.querySelector('input[name="nc-plan"][value="'+planToSelect+'"]');
-  if(planRadio) planRadio.checked = true;
-  document.getElementById('nc-modal').classList.add('on');
-}
-
-async function saveEditClient(){
-  const c = null; // legacy
-  if(!c) return;
-  const name = document.getElementById('nc-n').value.trim();
-  if(!name){toast2('Ingresa el nombre');return;}
-  const email = document.getElementById('nc-e').value.trim();
-  const industry = document.getElementById('nc-i').value.trim();
-  // Update old email registry
-  
-  // Update client data
-  const planEl2 = document.querySelector('input[name="nc-plan"]:checked');
-  const plan2 = planEl2 ? planEl2.value : (c.plan||'pro');
-  const planLimits2 = {basic:50, pro:200, enterprise:999999};
-  c.name = name;
-  c.email = email;
-  c.industry = industry;
-  c.plan = plan2;
-  c.limit = planLimits2[plan2];
-  c.initials = name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
-  if(email) 
-  
-  closeNCModal();
-  loadCLs();
-  toast2('Cliente actualizado ✓');
-}
-
 function closeNCModal(){
   document.getElementById('nc-modal').classList.remove('on');
   _editKey = null;
