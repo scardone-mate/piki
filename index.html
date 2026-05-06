@@ -349,6 +349,7 @@ body{background:var(--bg);min-height:100vh}
       <button class="tab on" onclick="swCPT('cp-d',this)">Dashboard</button>
       <button class="tab" onclick="swCPT('cp-u',this)">Subir material</button>
       <button class="tab" onclick="swCPT('cp-a',this)">Assets</button>
+      <button class="tab admin-only-tab" onclick="swCPT('cp-users',this);loadBrandUsers()">Usuarios</button>
     </div>
     <div id="cp-d">
       <div class="g4"><div class="box"><div class="sl">Total</div><div class="sv" id="cp-tot" style="color:var(--dk)">0</div></div><div class="box"><div class="sl">Aprobados</div><div class="sv gn" id="cp-ap">0</div></div><div class="box"><div class="sl">Revision</div><div class="sv am" id="cp-rv">0</div></div><div class="box"><div class="sl">Fuera</div><div class="sv rd" id="cp-out">0</div></div></div>
