@@ -1156,7 +1156,7 @@ async function createC(){
   const industry=document.getElementById('nc-i').value.trim();
   const initials=name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
   const cols=['#6B3FA0','#1A6B4A','#C0392B','#2C7BB6','#D47C0A','#F47920'];
-  const color=cols[0;
+  const color=cols[Math.floor(Math.random()*cols.length)];
   const planEl = document.querySelector('input[name="nc-plan"]:checked');
   const plan = planEl ? planEl.value : 'pro';
   const planLimits = {basic:50, pro:200, enterprise:999999};
