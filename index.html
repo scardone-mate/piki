@@ -1280,8 +1280,8 @@ async function loadCPDocs(clientKey){
       const grid=document.getElementById('cp-lg');
       const ph=grid.querySelector('.at:last-child');
       const t=document.createElement('div');t.className='at';t.style.position='relative';
-      const src=logo.data;
-      t.innerHTML=`<img src="${src}" alt="logo" style="width:100%;height:100%;object-fit:contain;padding:3px"/>
+      const src=logo.data; // works for both base64 data URLs and https:// URLs
+      t.innerHTML=`<img src="${src.startsWith('https://')?src:'data:'+logo.type+';base64,'+src}" alt="logo" style="width:100%;height:100%;object-fit:contain;padding:3px"/>
         <div onclick="deleteDocById('${logo.id||''}','__logo__',this);this.parentElement.remove()" class="admin-upload-btn" style="position:absolute;top:2px;right:2px;width:16px;height:16px;background:#E24B4A;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;cursor:pointer">✕</div>`;
       grid.insertBefore(t,ph);
     }
