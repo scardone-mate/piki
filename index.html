@@ -894,15 +894,19 @@ async function loadCompanyBrands(companyId){
       list.innerHTML='<div style="text-align:center;padding:2rem;color:#aaa;font-size:13px">No hay marcas. Crea la primera.</div>';
       return;
     }
-    list.innerHTML = brands.map(b=>`
-      <div class="clcard" onclick='openCP(${JSON.stringify(b).replace(/"/g,"'")})'>
-        <div class="clav" style="background:${b.color||'#F47920'}">${b.initials||b.name.substring(0,2).toUpperCase()}</div>
-        <div style="flex:1">
+        window._companyBrands = brands;
+    list.innerHTML = brands.map((b,i)=>`
+      <div class="clcard">
+        <div class="clav" style="background:${b.color||'#F47920'};cursor:pointer" onclick="openCPByIndex(${i})">${b.initials||b.name.substring(0,2).toUpperCase()}</div>
+        <div style="flex:1;cursor:pointer" onclick="openCPByIndex(${i})">
           <div style="font-size:14px;font-weight:700;color:var(--dk)">${b.name}</div>
           <div style="font-size:11px;color:#aaa">${b.industry||''} · ${b.plan||'pro'}</div>
         </div>
-        <div onclick="event.stopPropagation();editBrand_fn('${b.id}')" style="font-size:11px;color:var(--o);cursor:pointer;padding:3px 7px;border:1px solid rgba(244,121,32,.3);border-radius:5px;margin-right:4px">Editar</div>
-        <div style="font-size:18px;color:#ccc">›</div>
+        <div style="display:flex;gap:5px;align-items:center">
+          <div onclick="editBrand_fn('${b.id}')" style="font-size:11px;color:var(--o);cursor:pointer;padding:3px 7px;border:1px solid rgba(244,121,32,.3);border-radius:5px">Editar</div>
+          <div onclick="deleteBrand('${b.id}','${b.name.replace(/'/g,'')}')" style="font-size:11px;color:#E24B4A;cursor:pointer;padding:3px 7px;border:1px solid rgba(228,75,74,.3);border-radius:5px">Borrar</div>
+        </div>
+        <div style="font-size:18px;color:#ccc;cursor:pointer" onclick="openCPByIndex(${i})">&#8250;</div>
       </div>`).join('');
   }catch(e){
     list.innerHTML='<div style="text-align:center;padding:2rem;color:#E24B4A;font-size:12px">Error: '+e.message+'</div>';
