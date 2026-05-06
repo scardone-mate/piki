@@ -529,14 +529,6 @@ async function doLogin(){
         showBrandSelector(brands);
         return;
       }
-    const planNames={basic:'Plan Basico · 50 analisis/mes',pro:'Plan Profesional · 200 analisis/mes',enterprise:'Plan Enterprise · Ilimitado'};
-    document.getElementById('h-ind').textContent=planNames[c.plan||'pro']||'Bienvenido a tu plataforma de marca';
-    _brand.limit = c.limit||200;
-    document.getElementById('st-ap').textContent=c.approved||0;
-    document.getElementById('st-rv').textContent=c.review||0;
-    document.getElementById('st-out').textContent=c.rejected||0;
-    loadLogo(c.key);
-    goP('home');gs('s-dash');
     } else {
       toast2('Email no registrado. Contacta a tu administrador.');
       return;
@@ -1011,6 +1003,16 @@ async function saveCompanyEdit(){
   }catch(e){toast2('Error: '+e.message);}
 }
 
+function openCPByIndex(i){
+  const brands = window._companyBrands||[];
+  if(brands[i]) openCP(brands[i]);
+}
+
+function openCPById(id){
+  const brand = window['_brand_'+id];
+  if(brand) openCP(brand);
+}
+
 async function deleteCompany(id, name){
   if(!confirm('Borrar empresa "'+name+'" y todas sus marcas? Esta accion no se puede deshacer.')) return;
   try{
@@ -1065,15 +1067,18 @@ async function loadCompanies(){
       const section = document.createElement('div');
       section.style.marginBottom='.875rem';
 
-      const brandsHTML = compBrands.map(b=>{
-        const bJSON = JSON.stringify(b).replace(/"/g,"'");
-        return `<div class="clcard" style="margin-left:1rem;margin-bottom:.35rem;padding:.625rem .875rem" onclick='openCP(${bJSON})'>
+      const brandsHTML = compBrands.map((b,bi)=>{
+        window['_brand_'+b.id] = b;
+        return `<div class="clcard" style="margin-left:1rem;margin-bottom:.35rem;padding:.625rem .875rem" onclick="openCPById('${b.id}')">
           <div class="clav" style="background:${b.color||'#F47920'};width:30px;height:30px;font-size:11px">${b.initials||b.name.substring(0,2).toUpperCase()}</div>
           <div style="flex:1">
             <div style="font-size:13px;font-weight:700;color:var(--dk)">${b.name}</div>
             <div style="font-size:10px;color:#aaa">${b.industry||''} · ${b.plan||'pro'}</div>
           </div>
-          <div onclick="event.stopPropagation();editBrand_fn('${b.id}')" style="font-size:11px;color:var(--o);cursor:pointer;padding:3px 7px;border:1px solid rgba(244,121,32,.3);border-radius:5px">Editar</div>
+          <div style="display:flex;gap:4px">
+            <div onclick="event.stopPropagation();editBrand_fn('${b.id}')" style="font-size:11px;color:var(--o);cursor:pointer;padding:3px 6px;border:1px solid rgba(244,121,32,.3);border-radius:5px">Editar</div>
+            <div onclick="event.stopPropagation();deleteBrand('${b.id}','${b.name.replace(/'/g,'')}')" style="font-size:11px;color:#E24B4A;cursor:pointer;padding:3px 6px;border:1px solid rgba(228,75,74,.3);border-radius:5px">Borrar</div>
+          </div>
           <div style="font-size:16px;color:#ccc">›</div>
         </div>`;
       }).join('');
@@ -1421,6 +1426,16 @@ function goAdmin(){
   document.getElementById('s-cp').style.display='none';
   document.getElementById('s-admin').style.display='flex';
   loadCompanies();
+}
+
+function goBackFromCP(){
+  document.getElementById('s-cp').style.display='none';
+  if(window._currentCompany){
+    document.getElementById('s-company').style.display='flex';
+  } else {
+    document.getElementById('s-admin').style.display='flex';
+    loadCompanies();
+  }
 }
 
 function goBackFromBrand(){
