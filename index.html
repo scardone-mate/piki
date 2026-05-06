@@ -792,7 +792,7 @@ async function callAI(b64,type,brand,docs,isVid,aspects){
     content.push({type:"text",text:prompt});
   }else content=[{type:"text",text:prompt+"\n\n(Sin imagen adjunta.)"}];
   try{
-    const resp=await fetch('https://piki-analyze.scardone.workers.dev',{
+    const resp=await fetch('https://piki-analyze.scardone.workers.dev/api/analyze',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({messages:[{role:'user',content}]})
@@ -1147,7 +1147,7 @@ async function createCompany(){
 }
 
 function editClient(key){
-  const c = DB.c.find(x=>x.key===key);
+  const c = null; // legacy
   if(!c) return;
   _editKey = key;
   document.getElementById('nc-modal-title').textContent = 'Editar cliente';
@@ -1163,14 +1163,14 @@ function editClient(key){
 }
 
 async function saveEditClient(){
-  const c = DB.c.find(x=>x.key===_editKey);
+  const c = null; // legacy
   if(!c) return;
   const name = document.getElementById('nc-n').value.trim();
   if(!name){toast2('Ingresa el nombre');return;}
   const email = document.getElementById('nc-e').value.trim();
   const industry = document.getElementById('nc-i').value.trim();
   // Update old email registry
-  if(c.email) delete DB.r[c.email.toLowerCase()];
+  
   // Update client data
   const planEl2 = document.querySelector('input[name="nc-plan"]:checked');
   const plan2 = planEl2 ? planEl2.value : (c.plan||'pro');
@@ -1181,8 +1181,8 @@ async function saveEditClient(){
   c.plan = plan2;
   c.limit = planLimits2[plan2];
   c.initials = name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
-  if(email) DB.r[email.toLowerCase()] = c.key;
-  DB.save();
+  if(email) 
+  
   closeNCModal();
   loadCLs();
   toast2('Cliente actualizado ✓');
@@ -1198,13 +1198,13 @@ async function createC(){
   const industry=document.getElementById('nc-i').value.trim();
   const initials=name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
   const cols=['#6B3FA0','#1A6B4A','#C0392B','#2C7BB6','#D47C0A','#F47920'];
-  const color=cols[DB.c.length%cols.length];
+  const color=cols[0;
   const planEl = document.querySelector('input[name="nc-plan"]:checked');
   const plan = planEl ? planEl.value : 'pro';
   const planLimits = {basic:50, pro:200, enterprise:999999};
   const clientData = {name,initials,color,industry,email,plan,limit_analyses:planLimits[plan]};
   try{
-    const created = await DB.create(clientData);
+    const created = await api('/api/clients','POST',clientData);
     document.getElementById('nc-modal').classList.remove('on');
     ['nc-n','nc-e','nc-i'].forEach(id=>document.getElementById(id).value='');
     loadCLs();
@@ -1274,7 +1274,7 @@ async function loadCPDocs(clientKey){
 async function deleteDocById(id, name, el){
   if(el) el.closest('.dr2,.at') && el.closest('.dr2') ? el.closest('.dr2').remove() : null;
   if(id && id !== 'null'){
-    try{ await DB.deleteAsset(id); toast2('Eliminado'); }catch(e){}
+    try{ await api('/api/assets/'+id,'DELETE'); toast2('Eliminado'); }catch(e){}
   } else {
     // Fallback IDB
     deleteDoc(el, name);
@@ -1480,7 +1480,7 @@ function addCPA(e,gridId,type){
       if(type==='logo'&&_cc){
         const assetData={brand_id:_cc.id||_cc.key,name:'__logo__',type:f.type,data:ev.target.result,asset_type:'logo'};
         if(_cc.id){
-          DB.saveAsset(assetData).then(()=>toast2('Logo guardado ✓')).catch(()=>{
+          api('/api/assets','POST',assetData).then(()=>toast2('Logo guardado ✓')).catch(()=>{
             if(_cc.key) saveIDB(_cc.key,'__logo__',f.type,ev.target.result);
           });
         } else if(_cc.key){
@@ -1518,7 +1518,7 @@ function addCPDoc(e){
           asset_type: 'document'
         };
         if(_cc.id){
-          DB.saveAsset(assetData).then(()=>toast2('✓ '+f.name+' guardado')).catch(()=>{
+          api('/api/assets','POST',assetData).then(()=>toast2('✓ '+f.name+' guardado')).catch(()=>{
             // Fallback to IDB
             if(_cc.key) saveIDB(_cc.key,f.name,f.type,ev.target.result);
             toast2('✓ '+f.name+' guardado localmente');
