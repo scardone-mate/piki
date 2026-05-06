@@ -929,8 +929,30 @@ function showNewBrand(companyId, companyName){
   document.getElementById('nc-i-wrap').style.display='block';
   document.getElementById('nc-n-label').textContent='Nombre de la marca';
   document.getElementById('nc-n').placeholder='Ej: Alma';
+  const emailLabel = document.querySelector('#nc-e-wrap .mfl');
+  if(emailLabel) emailLabel.textContent='Email del titular de la marca';
+  document.getElementById('nc-e').placeholder='titular@marca.com';
   document.querySelector('input[name="nc-plan"][value="pro"]').checked = true;
+  // Show extra emails section
+  let extraEmails = document.getElementById('nc-extra-emails');
+  if(!extraEmails){
+    extraEmails = document.createElement('div');
+    extraEmails.id = 'nc-extra-emails';
+    extraEmails.style.marginBottom='.625rem';
+    extraEmails.innerHTML = '<div id="nc-email-list"></div><div onclick="addEmailField()" style="font-size:12px;color:var(--o);cursor:pointer;margin-top:4px">+ Agregar otro usuario</div>';
+    document.getElementById('nc-e-wrap').after(extraEmails);
+  }
+  document.getElementById('nc-email-list').innerHTML='';
+  extraEmails.style.display='block';
   document.getElementById('nc-modal').classList.add('on');
+}
+
+function addEmailField(){
+  const list = document.getElementById('nc-email-list');
+  const div = document.createElement('div');
+  div.style.cssText='display:flex;align-items:center;gap:6px;margin-bottom:6px';
+  div.innerHTML=`<input type="email" class="mfi nc-extra-email" placeholder="usuario@marca.com" style="flex:1;margin:0"/><span onclick="this.parentElement.remove()" style="cursor:pointer;color:#E24B4A;font-size:14px">✕</span>`;
+  list.appendChild(div);
 }
 
 async function createBrand(companyId){
@@ -960,8 +982,9 @@ async function createBrand(companyId){
     toast2('Marca '+name+' creada');
     if(window._currentCompany){
       loadCompanyBrands(window._currentCompany.id);
+    } else {
+      loadCompanies();
     }
-    loadCompanies();
   }catch(e){toast2('Error: '+e.message);}
 }
 
@@ -985,6 +1008,25 @@ async function saveCompanyEdit(){
   try{
     await api('/api/companies/'+_editingCompany.id,'PATCH',{name});
     closeNCModal();loadCompanies();toast2('Empresa actualizada');
+  }catch(e){toast2('Error: '+e.message);}
+}
+
+async function deleteCompany(id, name){
+  if(!confirm('Borrar empresa "'+name+'" y todas sus marcas? Esta accion no se puede deshacer.')) return;
+  try{
+    await api('/api/companies/'+id,'DELETE');
+    toast2('Empresa eliminada');
+    loadCompanies();
+  }catch(e){toast2('Error: '+e.message);}
+}
+
+async function deleteBrand(id, name){
+  if(!confirm('Borrar marca "'+name+'"? Esta accion no se puede deshacer.')) return;
+  try{
+    await api('/api/brands/'+id,'DELETE');
+    toast2('Marca eliminada');
+    if(window._currentCompany) loadCompanyBrands(window._currentCompany.id);
+    loadCompanies();
   }catch(e){toast2('Error: '+e.message);}
 }
 
@@ -1027,11 +1069,12 @@ async function loadCompanies(){
       }).join('');
 
       section.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem .25rem;margin-bottom:.35rem;cursor:pointer" onclick="openCompanyPanel(${JSON.stringify(company).replace(/"/g,'&quot;')})">
-          <div style="font-size:13px;font-weight:700;color:var(--dk)">🏢 ${company.name}</div>
-          <div style="display:flex;gap:6px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem .25rem;margin-bottom:.35rem">
+          <div style="font-size:13px;font-weight:700;color:var(--dk);cursor:pointer;flex:1" onclick="openCompanyPanel(${JSON.stringify(company).replace(/&quot;/g,'\\&quot;')})">🏢 ${company.name}</div>
+          <div style="display:flex;gap:5px;align-items:center">
             <div onclick="showNewBrand('${company.id}','${company.name.replace(/'/g,'')}')" style="font-size:11px;color:var(--o);cursor:pointer;padding:3px 8px;border:1px solid rgba(244,121,32,.3);border-radius:5px">+ Marca</div>
-            <div onclick="editCompany_fn('${company.id}','${company.name.replace(/'/g,'')}')" style="font-size:11px;color:#888;cursor:pointer;padding:3px 8px;border:1px solid #e0e0e0;border-radius:5px">Editar</div>
+            <div onclick="editCompany_fn('${company.id}','${company.name.replace(/'/g,'')}')" style="font-size:11px;color:#888;cursor:pointer;padding:3px 7px;border:1px solid #e0e0e0;border-radius:5px">Editar</div>
+            <div onclick="deleteCompany('${company.id}','${company.name.replace(/'/g,'')}')" style="font-size:11px;color:#E24B4A;cursor:pointer;padding:3px 7px;border:1px solid rgba(228,75,74,.3);border-radius:5px">Borrar</div>
           </div>
         </div>
         ${brandsHTML||'<div style="font-size:11px;color:#aaa;padding:.25rem 1rem">Sin marcas — agrega la primera</div>'}`;
