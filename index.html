@@ -463,6 +463,25 @@ body{background:var(--bg);min-height:100vh}
 
 <script>
 const WORKER = 'https://piki-analyze.scardone.workers.dev';
+const SUPA_URL = 'https://enukclqsinjlkanlmhkt.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVudWtjbHFzaW5qbGthbmxtaGt0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI1NjMzMTUsImV4cCI6MjA1ODEzOTMxNX0.B7LGlhQLUkfRFcbLJt9pWcJSurZdkYr0dFhBaOaEzjM';
+
+async function uploadDirectToStorage(file, brandId) {
+  const ext = file.name.split('.').pop();
+  const path = `${brandId}/${Date.now()}.${ext}`;
+  const res = await fetch(`${SUPA_URL}/storage/v1/object/piki-assets/${path}`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': `Bearer ${SUPA_KEY}`,
+      'Content-Type': file.type,
+      'x-upsert': 'true'
+    },
+    body: file
+  });
+  if (!res.ok) throw new Error('Upload failed: ' + await res.text());
+  return `${SUPA_URL}/storage/v1/object/public/piki-assets/${path}`;
+}
 
 async function api(path, method='GET', body=null){
   const opts = { method, headers:{'Content-Type':'application/json'} };
@@ -1536,26 +1555,26 @@ function addCPDoc(e){
     row.innerHTML=`<span style="font-size:14px">&#128196;</span><span class="dn">${f.name}</span><span class="ds">${sz}</span><span class="dd" onclick="deleteDoc(this,'${f.name}')">&#10005;</span>`;
     document.getElementById('cp-docs').appendChild(row);
     if(_cc){
-      const r2=new FileReader();
-      r2.onload=ev=>{
-        const assetData={
-          brand_id: _cc.id||_cc.key,
-          name: f.name,
-          type: f.type,
-          data: ev.target.result,
-          asset_type: 'document'
+      if(_cc.id && f.size > 1048576){ // >1MB: subir directo a Supabase Storage
+        uploadDirectToStorage(f, _cc.id).then(url=>{
+          const assetData={brand_id:_cc.id, name:f.name, type:f.type, data:url, asset_type:'document'};
+          return api('/api/assets','POST',assetData);
+        }).then(()=>toast2('✓ '+f.name+' guardado')).catch(err=>toast2('Error: '+err.message));
+      } else {
+        const r2=new FileReader();
+        r2.onload=ev=>{
+          const assetData={brand_id:_cc.id||_cc.key, name:f.name, type:f.type, data:ev.target.result, asset_type:'document'};
+          if(_cc.id){
+            api('/api/assets','POST',assetData).then(()=>toast2('✓ '+f.name+' guardado')).catch(()=>{
+              if(_cc.key) saveIDB(_cc.key,f.name,f.type,ev.target.result);
+              toast2('✓ '+f.name+' guardado localmente');
+            });
+          } else if(_cc.key){
+            saveIDB(_cc.key,f.name,f.type,ev.target.result).then(()=>toast2('✓ '+f.name+' guardado')).catch(()=>toast2('Error guardando '+f.name));
+          }
         };
-        if(_cc.id){
-          api('/api/assets','POST',assetData).then(()=>toast2('✓ '+f.name+' guardado')).catch(()=>{
-            // Fallback to IDB
-            if(_cc.key) saveIDB(_cc.key,f.name,f.type,ev.target.result);
-            toast2('✓ '+f.name+' guardado localmente');
-          });
-        } else if(_cc.key){
-          saveIDB(_cc.key,f.name,f.type,ev.target.result).then(()=>toast2('✓ '+f.name+' guardado')).catch(()=>toast2('Error guardando '+f.name));
-        }
-      };
-      r2.readAsDataURL(f);
+        r2.readAsDataURL(f);
+      }
     }
   });e.target.value='';
 }
