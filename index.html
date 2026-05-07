@@ -799,7 +799,19 @@ async function callAI(b64,type,brand,docs,isVid,aspects){
     content.push({type:"text",text:"DOCUMENTOS DE MARCA DEL CLIENTE:"});
     for(const d of docs){
       if(!d.data)continue;
-      const db=d.data.includes(',')?d.data.split(',')[1]:d.data;
+      let db=d.data;
+      // Si es URL de Supabase Storage, descargar y convertir a base64
+      if(db.startsWith('https://')){
+        try{
+          const r=await fetch(db);
+          const buf=await r.arrayBuffer();
+          const bytes=new Uint8Array(buf);
+          let bin='';for(let i=0;i<bytes.length;i++)bin+=String.fromCharCode(bytes[i]);
+          db=btoa(bin);
+        }catch(e){continue;}
+      } else if(db.includes(',')){
+        db=db.split(',')[1];
+      }
       if(!db)continue;
       if(d.type==='application/pdf')content.push({type:"document",source:{type:"base64",media_type:"application/pdf",data:db}});
       else if(d.type&&d.type.startsWith('image/'))content.push({type:"image",source:{type:"base64",media_type:d.type,data:db}});
