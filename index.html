@@ -644,22 +644,7 @@ async function runAnalysis(){
   if(_brand&&(_brand.id||_brand.key)){
     try{
       const assets = await api('/api/assets?brand_id='+(_brand.id||_brand.key));
-      const rawDocs = (assets||[]).filter(a=>a.asset_type!=='logo');
-      // Convert Storage URLs to base64
-      for(const d of rawDocs){
-        if(d.data && d.data.startsWith('https://')){
-          try{
-            const r = await fetch(d.data);
-            const buf = await r.arrayBuffer();
-            const bytes = new Uint8Array(buf);
-            let bin='';
-            for(let i=0;i<bytes.length;i++) bin+=String.fromCharCode(bytes[i]);
-            d.data = btoa(bin);
-            d.type = d.type||'application/pdf';
-          }catch(e){ console.warn('Could not fetch asset:', d.name, e); }
-        }
-        docs.push(d);
-      }
+      docs = (assets||[]).filter(a=>a.asset_type!=='logo');
     }catch(e){
       if(_brand.key) docs = await loadIDB(_brand.key);
     }
