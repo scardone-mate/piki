@@ -479,7 +479,10 @@ async function uploadDirectToStorage(file, brandId) {
     },
     body: file
   });
-  if (!res.ok) throw new Error('Upload failed: ' + await res.text());
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error('Upload failed: ' + err);
+  }
   return `${SUPA_URL}/storage/v1/object/public/piki-assets/${path}`;
 }
 
@@ -819,7 +822,6 @@ async function callAI(b64,type,brand,docs,isVid,aspects){
     for(const d of docs){
       if(!d.data)continue;
       let db=d.data;
-      // Si es URL de Supabase Storage, descargar y convertir a base64
       if(db.startsWith('https://')){
         try{
           const r=await fetch(db);
@@ -1555,7 +1557,8 @@ function addCPDoc(e){
     row.innerHTML=`<span style="font-size:14px">&#128196;</span><span class="dn">${f.name}</span><span class="ds">${sz}</span><span class="dd" onclick="deleteDoc(this,'${f.name}')">&#10005;</span>`;
     document.getElementById('cp-docs').appendChild(row);
     if(_cc){
-      if(_cc.id && f.size > 1048576){ // >1MB: subir directo a Supabase Storage
+      if(_cc.id && f.size > 1048576){
+        // Archivos >1MB: subir directo a Supabase Storage sin pasar por el Worker
         uploadDirectToStorage(f, _cc.id).then(url=>{
           const assetData={brand_id:_cc.id, name:f.name, type:f.type, data:url, asset_type:'document'};
           return api('/api/assets','POST',assetData);
@@ -1563,7 +1566,13 @@ function addCPDoc(e){
       } else {
         const r2=new FileReader();
         r2.onload=ev=>{
-          const assetData={brand_id:_cc.id||_cc.key, name:f.name, type:f.type, data:ev.target.result, asset_type:'document'};
+          const assetData={
+            brand_id: _cc.id||_cc.key,
+            name: f.name,
+            type: f.type,
+            data: ev.target.result,
+            asset_type: 'document'
+          };
           if(_cc.id){
             api('/api/assets','POST',assetData).then(()=>toast2('✓ '+f.name+' guardado')).catch(()=>{
               if(_cc.key) saveIDB(_cc.key,f.name,f.type,ev.target.result);
