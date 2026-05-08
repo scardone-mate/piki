@@ -575,6 +575,18 @@ function doLogout(){_brand=null;_adm=false;_fb64=null;_fup=false;gs('s-login');}
 async function loadLogo(key){
   if(!key)return;
   try{
+    // Si es un UUID (brand con ID en Supabase), cargar desde API
+    if(key && key.length > 10 && key.includes('-')){
+      const assets = await api('/api/assets?brand_id='+key);
+      const logo = (assets||[]).find(d=>d.asset_type==='logo'||d.name==='__logo__');
+      if(logo && logo.data){
+        document.getElementById('h-logo').src=logo.data;
+        document.getElementById('h-logo').style.display='block';
+        document.getElementById('h-av').style.display='none';
+      }
+      return;
+    }
+    // Fallback: IDB para brands locales
     const docs=await loadIDB(key);
     const logo=docs.find(d=>d.name==='__logo__');
     if(logo){
